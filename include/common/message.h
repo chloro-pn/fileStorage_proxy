@@ -23,7 +23,7 @@ std::string createUploadResponseMessage(const std::vector<Md5Info>& md5s);
 std::vector<Md5Info> getMd5FromUploadResponseMessage(const json& j);
 
 //UPLOAD_BLOCK
-std::string createUploadBlockMessage(const Md5Info& md5, uint32_t index, bool eof, const std::string& content);
+std::string createUploadBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content);
 
 bool theFirstBlockPiece(const json& j);
 

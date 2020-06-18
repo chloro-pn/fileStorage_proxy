@@ -7,6 +7,8 @@
 #include "json.hpp"
 #include "id_stroage.h"
 #include "client_context.h"
+#include "spdlog/spdlog.h"
+#include "md5.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -18,7 +20,7 @@ using nlohmann::json;
 
 class Proxy {
 public:
-  Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port);
+  Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shared_ptr<spdlog::logger> logger);
 
   void clientOnConnection(std::shared_ptr<TcpConnection> con);
 
@@ -42,11 +44,16 @@ private:
   std::set<std::shared_ptr<TcpConnection>> clients_;
   std::set<std::shared_ptr<TcpConnection>> storage_servers_;
   IdStorage id_storage_;
+  std::shared_ptr<spdlog::logger> logger_;
 
   std::vector<std::shared_ptr<TcpConnection>> selectSuitableStorageServers() const;
 
   Md5Info getFileId(ClientContext* client) {
-      //TODO.
+      std::string tmp;
+      for(const auto& each : client->getUploadingBlockMd5s()) {
+        tmp.append(each.getMd5Value());
+      }
+      return Md5Info(MD5(tmp).toStr());
   }
 
   void handleClientUploadRequestMessage(std::shared_ptr<TcpConnection> client, const json&);

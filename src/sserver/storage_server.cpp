@@ -6,15 +6,15 @@
 #include "common/message.h"
 #include "md5.h"
 #include <vector>
-#include <iostream>
 
 using nlohmann::json;
 
 void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
+  logger_->trace("storage server {} connect.", con->iport());
   con->set_context(std::make_shared<StorageServerContext>());
   StorageServerContext* state = con->get_context<StorageServerContext>();
   if(state->init() == false) {
-    std::cerr << "init fail. force close." << std::endl;
+    logger_->error("path storage init fail. {}", con->iport());
     con->force_close();
     return;
   }
@@ -24,21 +24,21 @@ void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
 }
 
 void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
+  logger_->trace("on message.");
   StorageServerContext* context = con->get_context<StorageServerContext>();
   json j = json::parse(std::string(con->message_data(), con->message_length()));
 
   if(Message::getType(j) == "upload_block") {
-    Md5Info block_md5 = Message::getMd5FromUploadBlockMessage(j);
-    //check if the same md5 block is uploading or have been stored in disk.
     Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
-    context->uploadingMd5s()[md5].append(Message::getContentFromUploadBlockMessage(j));
+    //check if the same md5 block is uploading or have been stored in disk.
+    std::string content = Message::getContentFromUploadBlockMessage(j);
+    context->uploadingMd5s()[md5].append(content);
     if(Message::theLastBlockPiece(j) == true) {
-      Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
       MD5 tmp(context->uploadingMd5s()[md5]);
-      std::string m1((const char*)tmp.getDigest(), 16);
-      if(m1 != md5.getMd5Value()) {
+      if(tmp.toStr() != md5.getMd5Value()) {
         context->uploadingMd5s().erase(md5);
         std::string fail_message = Message::constructUploadBlockFailMessage(md5);
+        logger_->warn("upload block fail. {} != {}", md5.getMd5Value(), tmp.toStr());
         con->send(fail_message);
         context->uploadingMd5s().erase(md5);
       }
@@ -48,29 +48,32 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
         bf.writeBlock(context->uploadingMd5s()[md5]);
         context->pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
         std::string ack_message = Message::constructUploadBlockAckMessage(md5);
+        logger_->trace("upload block ack. {}", md5.getMd5Value());
         con->send(ack_message);
         context->uploadingMd5s().erase(md5);
       }
     }
   }
   else {
-    std::cerr << "error state." << std::endl;
+    logger_->error("error state.");
     con->force_close();
     return;
   }
 }
 
 void StorageServer::onWriteComplete(std::shared_ptr<TcpConnection> con) {
+  logger_->trace("on write complete.");
   StorageServerContext* context = con->get_context<StorageServerContext>();
   if(context->getState() == StorageServerContext::state::transfering_block_set) {
     sendSomeMd5sToProxy(con);
+    logger_->trace("continue to send block md5 sets.");
   }
   else if(context->getState() == StorageServerContext::state::working) {
     //continue sending block.
     //if current block send over.
   }
   else {
-    std::cerr << "storage server should be working state." << std::endl;
+    logger_->error("error state.");
     con->force_close();
     return;
   }
@@ -82,11 +85,12 @@ void StorageServer::onClose(std::shared_ptr<TcpConnection> con) {
     std::string fail_message = Message::constructUploadBlockFailMessage(each.first);
     con->send(fail_message);
   }
-  std::cout << "close state : " << con->get_state_str() << std::endl;
+  logger_->warn("on close, state : {}", con->get_state_str());
 }
 
-StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string port):
-                             client_(io, ip, port) {
+StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger):
+                             client_(io, ip, port),
+                             logger_(logger) {
   client_.setOnConnection([this](std::shared_ptr<TcpConnection> con)->void {
     this->onConnection(con);
   });
@@ -102,9 +106,11 @@ StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string p
   client_.setOnClose([this](std::shared_ptr<TcpConnection> con)->void {
     this->onClose(con);
   });
+  logger_->trace("storage server start.");
 }
 
 void StorageServer::connectToProxyServer() {
+  logger_->trace("connect to proxy.");
   client_.connect();
 }
 

@@ -1,11 +1,12 @@
 #ifndef CLIENT_STATE_H
 #define CLIENT_STATE_H
 
+#include "common/md5_info.h"
+#include "common/asio_wrapper/tcp_connection.h"
+#include "spdlog/spdlog.h"
 #include <vector>
 #include <string>
 #include <memory>
-#include "common/md5_info.h"
-#include "common/asio_wrapper/tcp_connection.h"
 
 class ClientContext {
 public:
@@ -14,7 +15,10 @@ public:
                      have_uploaded_all_blocks,
                      file_storage_succ };
 
-  ClientContext():state_(state::init), succ_storages_(0), fail_storages_(0) {
+  explicit ClientContext(std::shared_ptr<spdlog::logger> logger):state_(state::init),
+                  succ_storages_(0),
+                  fail_storages_(0),
+                  logger_(logger) {
 
   }
 
@@ -48,7 +52,7 @@ public:
   }
 
   bool readyToReplyClient() const {
-    return succ_storages_ + fail_storages_ == 3;
+    return succ_storages_ + fail_storages_ == 1;
   }
 
   void setUploadingBlockMd5s(const std::vector<Md5Info>& md5s) {
@@ -78,6 +82,7 @@ private:
 
   int succ_storages_;
   int fail_storages_;
+  std::shared_ptr<spdlog::logger> logger_;
 };
 
 #endif // CLIENT_STATE_H

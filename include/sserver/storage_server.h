@@ -2,13 +2,14 @@
 #define STORAGE_SERVER_H
 
 #include "common/asio_wrapper/client.h"
+#include "spdlog/spdlog.h"
 #include "asio.hpp"
 
 using asio::ip::tcp;
 
 class StorageServer {
 public:
-  StorageServer(asio::io_context& io, std::string ip, std::string port);
+  StorageServer(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger);
 
   void connectToProxyServer();
 
@@ -24,6 +25,7 @@ public:
 
 private:
   Client client_;
+  std::shared_ptr<spdlog::logger> logger_;
 };
 
 #endif // STORAGE_SERVER_H

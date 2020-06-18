@@ -6,6 +6,7 @@ public:
   enum class state {init,
                     waiting_upload_response,
                     uploading_blocks,
+                    waiting_block_ack,
                     waiting_final_result,
                     succ,
                     fail};

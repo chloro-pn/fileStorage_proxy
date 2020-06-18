@@ -2,6 +2,7 @@
 #define STORAGE_CONTEXT_H
 
 #include "common/md5_info.h"
+#include "spdlog/spdlog.h"
 #include <set>
 #include <map>
 #include <vector>
@@ -9,7 +10,8 @@
 
 class StorageContext {
 public:
-  StorageContext():state_(state::init) {
+  explicit StorageContext(std::shared_ptr<spdlog::logger> logger):state_(state::init),
+                                                          logger_(logger) {
 
   }
 
@@ -26,6 +28,7 @@ public:
   }
 
   void pubBlockAckEvent(const Md5Info& block, bool succ) {
+    logger_->debug("pub block event : {} {}", block.getMd5Value(), succ);
     if(block_ack_callbacks_.find(block) == block_ack_callbacks_.end()) {
       return;
     }
@@ -36,8 +39,10 @@ public:
   }
 
   void handleRemainEvent() {
+    logger_->warn("handle remain event.");
     for(auto& each_cbs : block_ack_callbacks_) {
       for(auto& each_cb : each_cbs.second) {
+        logger_->warn("{}, {}", each_cbs.first.getMd5Value(), false);
         each_cb(each_cbs.first, false);
       }
     }
@@ -49,6 +54,7 @@ private:
   std::set<Md5Info> storage_md5s_;
   std::map<Md5Info, std::vector<std::function<void(const Md5Info&, bool)>>> block_ack_callbacks_;
   state state_;
+  std::shared_ptr<spdlog::logger> logger_;
 
 public:
   state getState() const {

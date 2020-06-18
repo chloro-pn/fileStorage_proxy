@@ -55,12 +55,13 @@ std::vector<Md5Info> getMd5FromUploadResponseMessage(const json& j) {
 }
 
 //UPLOAD_BLOCK
-std::string createUploadBlockMessage(const Md5Info &md5, uint32_t index, bool eof, const std::string &content) {
+std::string createUploadBlockMessage(const Md5Info &md5, uint32_t index, bool eof, std::string&& content) {
   json j;
   j["type"] = "upload_block";
+  j["md5"] = md5.getMd5Value();
   j["index"] = index;
   j["eof"] = eof;
-  j["content"] = content;
+  j["content"] = std::move(content);
   return j.dump();
 }
 
@@ -96,14 +97,14 @@ std::string constructUploadBlockFailMessage(const Md5Info& md5) {
 
 std::string constructFileStoreSuccMessage(Md5Info file_id) {
   json j;
-  j["type"] = "file_store_succ";
+  j["type"] = "file_storage_succ";
   j["file_id"] = file_id.getMd5Value();
   return j.dump();
 }
 
 std::string constructFileStoreFailMessage(Md5Info file_id) {
   json j;
-  j["type"] = "file_store_fail";
+  j["type"] = "file_storage_fail";
   j["file_id"] = file_id.getMd5Value();
   return j.dump();
 }

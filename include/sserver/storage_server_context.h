@@ -33,7 +33,7 @@ public:
       return next_to_transfer_md5_index_;
   }
 
-  std::map<Md5Info, std::string> uploadingMd5s() {
+  std::map<Md5Info, std::string>& uploadingMd5s() {
       return uploading_md5s_;
   }
 
