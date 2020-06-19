@@ -2,6 +2,7 @@
 #define BLOCK_FILE_H
 
 #include <string>
+#include "spdlog/spdlog.h"
 
 class BlockFile {
 public:
@@ -21,6 +22,7 @@ public:
 
 private:
   int fd_;
+  std::shared_ptr<spdlog::logger> logger_;
 };
 
 #endif // BLOCK_FILE_H

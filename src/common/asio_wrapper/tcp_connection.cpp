@@ -25,8 +25,7 @@ void TcpConnection::send(const std::string& str) {
 }
 
 void TcpConnection::send(std::string&& str) {
-  session_.do_write(str);
-  //session_.do_write(std::move(str));
+  session_.do_write(std::move(str));
 }
 
 void TcpConnection::shutdownw() {

@@ -188,6 +188,7 @@ void Agent::onClose(std::shared_ptr<TcpConnection> con) {
   if(context->getState() != AgentContext::state::succ) {
     logger_->error("error context state");
   }
+  logger_->trace("client {} disconnect.");
 }
 
 Agent::Agent(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger):

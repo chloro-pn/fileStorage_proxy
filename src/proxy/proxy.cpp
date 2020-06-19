@@ -242,8 +242,8 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
   std::string message_type = Message::getType(message);
   StorageContext* storage = con->get_context<StorageContext>();
   if(storage->getState() == StorageContext::state::waiting_block_set) {
-    logger_->trace("server state : waiting block set.");
     if(message_type == "transfer_block_set") {
+      logger_->trace("handle transfer block set message., from {}", con->iport());
       std::vector<Md5Info> md5s = Message::getMd5sFromTransferBlockSetMessage(message);
       for(auto& each : md5s) {
         storage->pushStorageMd5(each);
