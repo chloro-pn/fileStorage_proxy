@@ -18,34 +18,34 @@ using nlohmann::json;
 #define EACH_MESSAGE_SEND 2048
 
 std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
-    std::vector<inner_type_> result;
-    fd_ = open(filepath.c_str(), O_RDONLY);
-    if(fd_ < 0) {
-        logger_->critical("file {} open error.", filepath);
-        spdlog::shutdown();
-        exit(-1);
+  std::vector<inner_type_> result;
+  fd_ = open(filepath.c_str(), O_RDONLY);
+  if(fd_ < 0) {
+    logger_->critical("file {} open error.", filepath);
+    spdlog::shutdown();
+    exit(-1);
+  }
+  size_t start_point = 0;
+  char buf[BLOCK_SIZE + 1];
+  while(true) {
+    ssize_t n = read(fd_, buf, sizeof(buf) - 1);
+    if(n < 0) {
+      logger_->critical("file {} read error.", filepath);
+      spdlog::shutdown();
+      exit(-1);
     }
-    size_t start_point = 0;
-    char buf[BLOCK_SIZE + 1];
-    while(true) {
-      ssize_t n = read(fd_, buf, sizeof(buf) - 1);
-      if(n < 0) {
-        logger_->critical("file {} read error.", filepath);
-        spdlog::shutdown();
-        exit(-1);
-      }
-      else if(n == 0) {
-        break;
-      }
-      else {
-        buf[n] = '\0';
-        MD5 md5(std::string(buf, n));
-        logger_->trace("md5 str : {}", md5.toStr());
-        result.push_back(inner_type_(Md5Info(md5.toStr()), start_point, n));
-        start_point += n;
-      }
+    else if(n == 0) {
+      break;
     }
-    return result;
+    else {
+      buf[n] = '\0';
+      MD5 md5(std::string(buf, n));
+      logger_->trace("md5 str : {}", md5.toStr());
+      result.push_back(inner_type_(Md5Info(md5.toStr()), start_point, n));
+      start_point += n;
+    }
+  }
+  return result;
 }
 
 std::vector<Md5Info> Agent::getMd5sFromInnerType(const std::vector<inner_type_> &md5s) {
@@ -58,6 +58,7 @@ std::vector<Md5Info> Agent::getMd5sFromInnerType(const std::vector<inner_type_> 
 }
 
 void Agent::sendBlockPieceFromCurrentPoint(std::shared_ptr<TcpConnection> con) {
+  //no block need to send.
   if(upload_md5s_info_.size() == 0) {
     AgentContext* context = con->get_context<AgentContext>();
     std::string message = Message::constructUploadAllBlocksMessage();

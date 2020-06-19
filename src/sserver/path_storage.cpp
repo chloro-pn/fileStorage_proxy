@@ -2,7 +2,8 @@
 #include "hiredis.h"
 #include <iostream>
 
-PathStorage::PathStorage():context_(nullptr) {
+PathStorage::PathStorage():context_(nullptr),
+                           logger_(spdlog::get("console")) {
 
 }
 
@@ -19,7 +20,9 @@ std::vector<Md5Info> PathStorage::getAllItems() const {
   redisReply *reply = nullptr;
   reply = static_cast<redisReply*>(redisCommand(context_, "HGETALL md5_path"));
   if(reply->type != REDIS_REPLY_ARRAY) {
-    std::cerr << "error type : " << reply->type << std::endl;
+    logger_->critical("redis reply error type : {}", reply->type);
+    spdlog::shutdown();
+    exit(-1);
   }
   for(size_t i = 0; i < reply->elements; i += 2) {
     result.push_back(Md5Info(std::string(reply->element[i]->str, reply->element[i]->len)));

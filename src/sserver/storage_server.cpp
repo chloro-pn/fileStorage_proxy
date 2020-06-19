@@ -31,6 +31,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
   if(Message::getType(j) == "upload_block") {
     Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
     //check if the same md5 block is uploading or have been stored in disk.
+    //#######bug.#######
     std::string content = Message::getContentFromUploadBlockMessage(j);
     context->uploadingMd5s()[md5].append(content);
     if(Message::theLastBlockPiece(j) == true) {
@@ -43,14 +44,28 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
         context->uploadingMd5s().erase(md5);
       }
       else {
-        BlockFile bf;
-        bf.createNewFile(context->getBlockFilePath(md5));
-        bf.writeBlock(context->uploadingMd5s()[md5]);
-        context->pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
-        std::string ack_message = Message::constructUploadBlockAckMessage(md5);
-        logger_->trace("upload block ack. {}", md5.getMd5Value());
-        con->send(ack_message);
-        context->uploadingMd5s().erase(md5);
+        bool exist = context->pathStorage().checkItem(md5);
+        if(exist == true) {
+          std::string ack_message = Message::constructUploadBlockAckMessage(md5);
+          logger_->trace("block {} exist.send ack.", md5.getMd5Value());
+          con->send(ack_message);
+          context->uploadingMd5s().erase(md5);
+        }
+        else {
+          BlockFile bf;
+          bool succ = bf.createNewFile(context->getBlockFilePath(md5));
+          if(succ == false) {
+            logger_->critical("create new file error.");
+            con->force_close();
+            return;
+          }
+          bf.writeBlock(context->uploadingMd5s()[md5]);
+          context->pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
+          std::string ack_message = Message::constructUploadBlockAckMessage(md5);
+          logger_->trace("upload block ack. {}", md5.getMd5Value());
+          con->send(ack_message);
+          context->uploadingMd5s().erase(md5);
+        }
       }
     }
   }

@@ -3,7 +3,8 @@
 
 using nlohmann::json;
 
-IdStorage::IdStorage():context_(nullptr) {
+IdStorage::IdStorage():context_(nullptr),
+                       logger_(spdlog::get("console")){
 
 }
 
@@ -28,14 +29,20 @@ void IdStorage::storageIdMd5s(const Md5Info& id, const std::vector<Md5Info>& md5
   }
   std::string value = j.dump();
   redisReply* reply = static_cast<redisReply*>(redisCommand(context_, "HSET id_md5s, %s %s", id.getMd5Value().c_str(), value.c_str()));
-  //check.
+  if(reply->type != REDIS_REPLY_INTEGER) {
+    logger_->critical("error reply type : {}", reply->type);
+    spdlog::shutdown();
+    exit(-1);
+  }
   freeReplyObject(reply);
 }
 
 bool IdStorage::findId(const Md5Info& id) const {
   redisReply* reply = static_cast<redisReply*>(redisCommand(context_, "HEXISTS id_md5s %s", id.getMd5Value().c_str()));
   if(reply->type != REDIS_REPLY_INTEGER) {
-    //log fatal.
+    logger_->critical("error reply type : {}", reply->type);
+    spdlog::shutdown();
+    exit(-1);
   }
   bool ret = (reply->integer == 1);
   freeReplyObject(reply);
@@ -45,7 +52,9 @@ bool IdStorage::findId(const Md5Info& id) const {
 std::vector<Md5Info> IdStorage::getMd5sFromId(const Md5Info& id) const {
   redisReply* reply = static_cast<redisReply*>(redisCommand(context_, "HGET id_md5s %s", id.getMd5Value().c_str()));
   if(reply->type != REDIS_REPLY_STRING) {
-    //log fatal.
+    logger_->critical("error reply type : {}", reply->type);
+    spdlog::shutdown();
+    exit(-1);
   }
   std::vector<Md5Info> result;
   json j = json::parse(std::string(reply->str, reply->len));

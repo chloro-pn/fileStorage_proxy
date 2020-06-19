@@ -3,6 +3,7 @@
 
 #include "hiredis.h"
 #include "common/md5_info.h"
+#include "spdlog/spdlog.h"
 #include <vector>
 
 class IdStorage {
@@ -21,6 +22,7 @@ public:
 
 private:
   redisContext* context_;
+  std::shared_ptr<spdlog::logger> logger_;
 };
 
 #endif // IDSTORAGE_H
