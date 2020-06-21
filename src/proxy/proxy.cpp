@@ -3,6 +3,7 @@
 #include "proxy/client_context.h"
 #include "proxy/storage_context.h"
 #include "json.hpp"
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
@@ -40,8 +41,25 @@ Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shar
 
 std::vector<std::shared_ptr<TcpConnection>> Proxy::selectSuitableStorageServers() const {
   logger_->trace("func : selectSuitableStorageServers.");
-    //just for test.
-  return { *storage_servers_.begin() };
+  size_t need_select_ss = 1;
+  if(storage_servers_.size() < need_select_ss) {
+    logger_->critical("storage server's count < {}", need_select_ss);
+    spdlog::shutdown();
+    exit(-1);
+  }
+  std::vector<std::shared_ptr<TcpConnection>> result;
+  for(size_t i = 0; i < need_select_ss; ++i) {
+    while(true) {
+      auto selected = storage_servers_.begin();
+      std::advance(selected, rand() % storage_servers_.size());
+      if(std::find(result.begin(), result.end(), *selected) == result.end()) {
+        result.push_back(*selected);
+        logger_->debug("sserver {} selected.", (*selected)->iport());
+        break;
+      }
+    }
+  }
+  return result;
 }
 
 std::vector<Md5Info> Proxy::getNeedUploadMd5s(const std::vector<Md5Info> &md5s) {

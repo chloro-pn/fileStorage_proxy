@@ -7,11 +7,11 @@
 class Md5Info {
 public:
   Md5Info(const char* ptr, size_t n):md5_value_(ptr, n) {
-    //assert(n == 32);
+    assert(n == 32);
   }
 
   explicit Md5Info(const std::string& str):md5_value_(str) {
-    //assert(str.length() == 32);
+    assert(str.length() == 32);
   }
 
   const std::string& getMd5Value() const {

@@ -14,8 +14,8 @@
 
 using nlohmann::json;
 
-#define BLOCK_SIZE 64 * 1024 //64 kb for test.
-#define EACH_MESSAGE_SEND 2048
+#define BLOCK_SIZE 64 //64 byte for test.
+#define EACH_MESSAGE_SEND 20 // 20 byte for test.
 
 std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
   std::vector<inner_type_> result;
@@ -120,6 +120,7 @@ void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
       upload_md5s_info_ = Message::getMd5FromUploadResponseMessage(j);
       current_uploading_index_ = 0;
       current_block_offset_ = 0;
+      piece_index_ = 0;
       context->setState(AgentContext::state::uploading_blocks);
       //send and update state.
       sendBlockPieceFromCurrentPoint(con);
@@ -188,7 +189,7 @@ void Agent::onClose(std::shared_ptr<TcpConnection> con) {
   if(context->getState() != AgentContext::state::succ) {
     logger_->error("error context state");
   }
-  logger_->trace("client {} disconnect.");
+  logger_->trace("client {} disconnect.", con->iport());
 }
 
 Agent::Agent(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger):
