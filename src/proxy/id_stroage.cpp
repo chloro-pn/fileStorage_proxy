@@ -63,7 +63,3 @@ std::vector<Md5Info> IdStorage::getMd5sFromId(const Md5Info& id) const {
   }
   return result;
 }
-
-
-
-
