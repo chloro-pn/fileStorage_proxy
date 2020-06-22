@@ -24,7 +24,7 @@ $(OBJS):%.out : %.cpp src/libfilest.a
 	$(CXX) -o $@ $< -MMD -MP $(INCLUDE_PATH) $(LIBS) $(CXXFLAGS)
 
 src/libfilest.a :
-	@echo "try to make in ./src";\
+	@echo "try to make in ../src";\
 	$(MAKE) -C ../src;
 
 -include $(DEPS)
