@@ -5,7 +5,3 @@ StorageServerContext::StorageServerContext():state_(StorageServerContext::state:
                                              base_path_("/home/pn/"){
 
 }
-
-bool StorageServerContext::init() {
-  return ds_.init();
-}

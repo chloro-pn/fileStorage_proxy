@@ -3,6 +3,7 @@
 
 #include "common/asio_wrapper/client.h"
 #include "spdlog/spdlog.h"
+#include "path_storage.h"
 #include "asio.hpp"
 
 using asio::ip::tcp;
@@ -23,9 +24,14 @@ public:
 
   void onClose(std::shared_ptr<TcpConnection> con);
 
+  PathStorage& pathStorage() {
+    return ds_;
+  }
+
 private:
   Client client_;
   std::shared_ptr<spdlog::logger> logger_;
+  PathStorage ds_;
 };
 
 #endif // STORAGE_SERVER_H

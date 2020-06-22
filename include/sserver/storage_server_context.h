@@ -11,12 +11,6 @@ public:
 
   StorageServerContext();
 
-  bool init();
-
-  PathStorage& pathStorage() {
-      return ds_;
-  }
-
   state getState() const {
       return state_;
   }
@@ -43,7 +37,6 @@ public:
 
 private:
   state state_;
-  PathStorage ds_;
   size_t next_to_transfer_md5_index_;
   std::vector<Md5Info> transfering_md5s_;
 

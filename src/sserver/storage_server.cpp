@@ -13,13 +13,8 @@ void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
   logger_->trace("storage server {} connect.", con->iport());
   con->set_context(std::make_shared<StorageServerContext>());
   StorageServerContext* state = con->get_context<StorageServerContext>();
-  if(state->init() == false) {
-    logger_->error("path storage init fail. {}", con->iport());
-    con->force_close();
-    return;
-  }
   state->setState(StorageServerContext::state::transfering_block_set);
-  state->transferingMd5s() = state->pathStorage().getAllItems();
+  state->transferingMd5s() = pathStorage().getAllItems();
   sendSomeMd5sToProxy(con);
 }
 
@@ -44,7 +39,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
         context->uploadingMd5s().erase(md5);
       }
       else {
-        bool exist = context->pathStorage().checkItem(md5);
+        bool exist = pathStorage().checkItem(md5);
         if(exist == true) {
           std::string ack_message = Message::constructUploadBlockAckMessage(md5);
           logger_->trace("block {} exist.send ack.", md5.getMd5Value());
@@ -60,7 +55,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
             return;
           }
           bf.writeBlock(context->uploadingMd5s()[md5]);
-          context->pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
+          pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
           std::string ack_message = Message::constructUploadBlockAckMessage(md5);
           logger_->trace("upload block ack. {}", md5.getMd5Value());
           con->send(ack_message);
@@ -106,6 +101,12 @@ void StorageServer::onClose(std::shared_ptr<TcpConnection> con) {
 StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger):
                              client_(io, ip, port),
                              logger_(logger) {
+  if(ds_.init() == false) {
+    logger_->critical("hiredis init error.");
+    spdlog::shutdown();
+    exit(-1);
+  }
+
   client_.setOnConnection([this](std::shared_ptr<TcpConnection> con)->void {
     this->onConnection(con);
   });

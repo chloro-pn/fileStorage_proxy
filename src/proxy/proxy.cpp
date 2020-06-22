@@ -13,6 +13,11 @@ Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shar
              p1_server_(io, p1_port),
              p2_server_(io, p2_port),
              logger_(logger) {
+  if(idStorage().init() == false) {
+    logger_->critical("hiredis init error.");
+    spdlog::shutdown();
+    exit(-1);
+  }
   p1_server_.setOnConnection([this](std::shared_ptr<TcpConnection> con)->void {
     this->clientOnConnection(con);
   });
@@ -183,10 +188,6 @@ void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
   logger_->warn("on connection, {}", con->iport());
   con->set_context(std::make_shared<ClientContext>(logger_));
   clients_.insert(con);
-  if(idStorage().init() == false) {
-    logger_->error("id stroage init fail.");
-    con->force_close();
-  }
 }
 
 void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
