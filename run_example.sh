@@ -10,9 +10,7 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-echo "making examples..."
-make all
-./proxy.out > proxy.txt &
+./proxy.out ../conf/proxy.conf > proxy.txt &
 echo "start proxy succ."
 ./sserver.out > sserver.txt &
 echo "start sserver succ."

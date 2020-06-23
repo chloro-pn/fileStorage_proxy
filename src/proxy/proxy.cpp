@@ -1,5 +1,6 @@
 #include "proxy/proxy.h"
 #include "common/message.h"
+#include "common/configure.h"
 #include "proxy/client_context.h"
 #include "proxy/storage_context.h"
 #include "json.hpp"
@@ -51,7 +52,7 @@ Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shar
 
 std::vector<std::shared_ptr<TcpConnection>> Proxy::selectSuitableStorageServers() const {
   logger_->trace("func : selectSuitableStorageServers.");
-  size_t need_select_ss = 1;
+  size_t need_select_ss = Configure::instance().get<int>("block_backup_count");
   if(storage_servers_.size() < need_select_ss) {
     logger_->critical("storage server's count < {}", need_select_ss);
     spdlog::shutdown();

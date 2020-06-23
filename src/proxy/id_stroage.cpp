@@ -1,5 +1,6 @@
 #include "proxy/id_stroage.h"
 #include "json.hpp"
+#include "common/configure.h"
 
 using nlohmann::json;
 
@@ -9,7 +10,10 @@ IdStorage::IdStorage():context_(nullptr),
 }
 
 bool IdStorage::init() {
-  context_ = redisConnect("127.0.0.1", 6379);
+  std::string ip = Configure::instance().get<std::string>("redis_ip");
+  uint16_t port = Configure::instance().get<uint16_t>("redis_port");
+
+  context_ = redisConnect(ip.c_str(), port);
   if(context_ == nullptr || context_->err) {
     return false;
   }
