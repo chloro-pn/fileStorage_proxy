@@ -27,6 +27,8 @@ std::string createUploadBlockMessage(const Md5Info& md5, uint32_t index, bool eo
 
 void setFlowIdToUploadBlockMessage(json& j, uint64_t flow_id);
 
+uint64_t getFlowIdFromUploadBlockMessage(const json& j);
+
 bool theFirstBlockPiece(const json& j);
 
 bool theLastBlockPiece(const json& j);

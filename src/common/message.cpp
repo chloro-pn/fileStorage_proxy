@@ -71,6 +71,10 @@ void setFlowIdToUploadBlockMessage(json& j, uint64_t flow_id) {
   j["flow_id"] = flow_id;
 }
 
+uint64_t getFlowIdFromUploadBlockMessage(const json& j) {
+  return j["flow_id"].get<uint64_t>();
+}
+
 bool theFirstBlockPiece(const json& j) {
   return j["index"].get<uint32_t>() == 0;
 }
