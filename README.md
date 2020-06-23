@@ -13,7 +13,32 @@
 6.可能发生向同一个sserver发送同一个md5值的block的piece，这样会导致
 记录混乱，考虑加上flow号区分不同块的piece，丢弃不需要的，或者
 新命令（优化）。[doing]
-update(2020-0623):
+
+2020-06-23 : 在uploadblock消息中添加了flow_id字段，类型为uint64_t，客户端只要将该字段置为0即可，proxy设置该字段
+并将该消息转发给存储端，因为在并发情况下可能会有多个客户端向同一个存储服务器上传同一个文件块（md5值相同），
+因此存储端需要一种机制区分上传同一个文件块的不同客户端。例如：
+
+```c++
+std::map<Md5Info, std::pair<uint64_t, std::string>> uploading_blocks_;
+...
+Md5Info md5 = Message::getMd5FromUploadBlockMessage(message);
+uint64_t flow_id = Message::getFlowIdFromUploadBlockMessage(message);
+if(uploading_blocks_.find(md5) == uploading_blocks_.end()) {
+  ...//log and exit.
+}
+else {
+  auto& tmp = uploading_blocks_[md5];
+  if(flow_id != tmp.first) {
+    ...//不是同一个客户端上传的md5块，直接丢掉（后续可以添加流程控制消息，告诉proxy该flow_id标识的客户端不需要继续上传该块，已经有其他客户端正在上传了。）
+  }
+  else {
+    ...//storage.
+  }
+}
+```
+
+这个问题在之后的文件下载功能也会出现，可能有不同的客户端同一时间向同一个存储服务器请求下载同一个块，存储服务器要根据flow_id分别
+记录每个客户端当前的下载上下文。
 
 2020-06-21 : 
 
