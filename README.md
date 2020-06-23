@@ -55,4 +55,4 @@ else {
 本项目使用第三方库redis，hiredis，spdlog，json，asio需要在src/makefile和examples/makefile中根据本机情况配置头文件路径和库文件路径。
 redis作为服务程序启动，端口号默认，asio和spdlog是header-only库，json我直接放到项目中了，不用配置。
 
-注：下一步预计开配置文件接口，开始的时候为了方便很多都写死在程序中了，现在调试很不方便。
+注：下一步预计开配置文件接口，开始的时候为了方便很多都写死在程序中了，现在调试很不方便。[doing]
