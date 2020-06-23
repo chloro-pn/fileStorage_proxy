@@ -9,6 +9,11 @@
 
 using nlohmann::json;
 
+Proxy::FlowType Proxy::get_flow_id() {
+  static uint64_t counter = 0;
+  return counter++;
+}
+
 Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shared_ptr<spdlog::logger> logger):
              p1_server_(io, p1_port),
              p2_server_(io, p2_port),
@@ -107,14 +112,18 @@ void Proxy::handleClientUploadRequestMessage(std::shared_ptr<TcpConnection> con,
   logger_->debug("change state to waiting_upload_block");
 }
 
-void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, const json& j) {
+void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, json& j) {
   logger_->trace("handle upload block message.");
   ClientContext* client = con->get_context<ClientContext>();
+  //distinguish different clients.
+  Message::setFlowIdToUploadBlockMessage(j, client->getFlowId());
   if(Message::theFirstBlockPiece(j)) {
     logger_->trace("block {}'s first piece.", Message::getMd5FromUploadBlockMessage(j).getMd5Value());
     client->succFailZero();
-    auto cb = [this, con](const Md5Info& md5, bool succ)->void {
-      if(clients_.find(con) == clients_.end()) {
+    std::weak_ptr<TcpConnection> weak(con);
+    auto cb = [this, weak](const Md5Info& md5, bool succ)->void {
+      auto con = weak.lock();
+      if(!con) {
         logger_->warn("client {} exit before block event handle.{} : {}", con->iport(), md5.getMd5Value(), succ);
         return;
       }
@@ -184,10 +193,15 @@ void Proxy::handleClientUploadAllBlocksMessage(std::shared_ptr<TcpConnection> co
   logger_->trace("change state to have_uploaded_all_blocks.");
 }
 
+void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> client, const json&) {
+
+}
+
 void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
   logger_->warn("on connection, {}", con->iport());
-  con->set_context(std::make_shared<ClientContext>(logger_));
-  clients_.insert(con);
+  FlowType id = get_flow_id();
+  con->set_context(std::make_shared<ClientContext>(id, logger_));
+  clients_[id] = con;
 }
 
 void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
@@ -197,13 +211,17 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
   ClientContext::state state = client->getState();
   if(state == ClientContext::state::init) {
     logger_->trace("client state : init");
-    if(message_type != "upload_request") {
-      logger_->error("error message type : {}", message_type);
-      con->force_close();
+    if(message_type == "upload_request") {
+      handleClientUploadRequestMessage(con, message);
+      return;
+    }
+    else if(message_type == "download_request") {
+      handleClientDownloadRequestMessage(con, message);
       return;
     }
     else {
-      handleClientUploadRequestMessage(con, message);
+      logger_->error("error message type : {}", message_type);
+      con->force_close();
       return;
     }
   }
@@ -236,10 +254,11 @@ void Proxy::clientOnClose(std::shared_ptr<TcpConnection> con) {
       logger_->trace("client {} disconnect.", con->get_state_str());
       con->shutdownw();
   }
-  clients_.erase(con);
-  ClientContext* client = con->get_context<ClientContext>();
-  if(client->getState() == ClientContext::state::have_uploaded_all_blocks) {
-    client->setState(ClientContext::state::file_storage_succ);
+  ClientContext* context = con->get_context<ClientContext>();
+  FlowType id = context->getFlowId();
+  clients_.erase(id);
+  if(context->getState() == ClientContext::state::have_uploaded_all_blocks) {
+    context->setState(ClientContext::state::file_storage_succ);
     logger_->trace("over.");
     return;
   }

@@ -25,6 +25,8 @@ std::vector<Md5Info> getMd5FromUploadResponseMessage(const json& j);
 //UPLOAD_BLOCK
 std::string createUploadBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content);
 
+void setFlowIdToUploadBlockMessage(json& j, uint64_t flow_id);
+
 bool theFirstBlockPiece(const json& j);
 
 bool theLastBlockPiece(const json& j);
@@ -58,6 +60,31 @@ std::vector<Md5Info> getMd5sFromTransferBlockSetMessage(const json& j);
 std::string constructTransferBlockSetMessage(const std::vector<Md5Info>& md5s, bool eof);
 
 bool theLastTransferBlockSet(const json& j);
+
+//DOWNLOAD_REQUEST
+std::string constructDownLoadRequestMessage(Md5Info file_id);
+
+Md5Info getFileIdFromDownLoadRequestMessage(const json& j);
+
+//DOWNLOAD_BLOCK
+std::string constructDownLoadBlockMessage(Md5Info block);
+
+Md5Info getMD5FromDownLoadBlockMessage(const json& j);
+
+//TRANSFER_BLOCK
+std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content);
+
+Md5Info getMd5FromTransferBlockMessage(const json& j);
+
+std::string getContentFromTransferBlockMessage(const json& j);
+
+//TRANSFER_BLOCK_ACK
+std::string constructTransferBlockAckMessage(const Md5Info& md5);
+
+Md5Info getMd5FromTransferBlockAckMessage(const json& j);
+
+//TRANSFER_ALL_BLOCKS
+std::string constructTransferAllBlocksMessage();
 }
 
 #endif // MESSAGE_H

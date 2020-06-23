@@ -60,9 +60,15 @@ std::string createUploadBlockMessage(const Md5Info &md5, uint32_t index, bool eo
   j["type"] = "upload_block";
   j["md5"] = md5.getMd5Value();
   j["index"] = index;
+  //client does not need to set it.
+  j["flow_id"] = 0;
   j["eof"] = eof;
   j["content"] = std::move(content);
   return j.dump();
+}
+
+void setFlowIdToUploadBlockMessage(json& j, uint64_t flow_id) {
+  j["flow_id"] = flow_id;
 }
 
 bool theFirstBlockPiece(const json& j) {
@@ -148,5 +154,67 @@ std::string constructTransferBlockSetMessage(const std::vector<Md5Info>& md5s, b
 
 bool theLastTransferBlockSet(const json &j) {
   return j["eof"] == true;
+}
+
+//DOWNLOAD_REQUEST
+std::string constructDownLoadRequestMessage(Md5Info file_id) {
+  json j;
+  j["type"] = "download_request";
+  j["file_id"] = file_id.getMd5Value();
+  return j.dump();
+}
+
+Md5Info getFileIdFromDownLoadRequestMessage(const json& j) {
+  return Md5Info(j["file_id"].get<std::string>());
+}
+
+//DOWNLOAD_BLOCK
+std::string constructDownLoadBlockMessage(Md5Info block) {
+  json j;
+  j["type"] = "download_block";
+  j["md5"] = block.getMd5Value();
+  return j.dump();
+}
+
+Md5Info getMD5FromDownLoadBlockMessage(const json& j) {
+  return Md5Info(j["md5"].get<std::string>());
+}
+
+//TRANSFER_BLOCK
+std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content) {
+  json j;
+  j["type"] = "transfer_block";
+  j["md5"] = md5.getMd5Value();
+  j["index"] = index;
+  j["eof"] = eof;
+  j["content"] = std::move(content);
+  return j.dump();
+}
+
+Md5Info getMd5FromTransferBlockMessage(const json& j) {
+  return Md5Info(j["md5"].get<std::string>());
+}
+
+std::string getContentFromTransferBlockMessage(const json& j) {
+  return j["content"].get<std::string>();
+}
+
+//TRANSFER_BLOCK_ACK
+std::string constructTransferBlockAckMessage(const Md5Info& md5) {
+  json j;
+  j["type"] = "transfer_block_ack";
+  j["md5"] = md5.getMd5Value();
+  return j.dump();
+}
+
+Md5Info getMd5FromTransferBlockAckMessage(const json& j) {
+  return Md5Info(j["md5"].get<std::string>());
+}
+
+//TRANSFER_ALL_BLOCKS
+std::string constructTransferAllBlocksMessage() {
+  json j;
+  j["type"] = "transfer_all_blocks";
+  return j.dump();
 }
 } //namespace Message

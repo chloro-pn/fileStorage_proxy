@@ -15,7 +15,9 @@ public:
                      have_uploaded_all_blocks,
                      file_storage_succ };
 
-  explicit ClientContext(std::shared_ptr<spdlog::logger> logger):state_(state::init),
+  ClientContext(uint64_t flow_id, std::shared_ptr<spdlog::logger> logger):
+                  flow_id_(flow_id),
+                  state_(state::init),
                   succ_storages_(0),
                   fail_storages_(0),
                   logger_(logger) {
@@ -75,7 +77,12 @@ public:
     transfering_storage_servers_.clear();
   }
 
+  uint64_t getFlowId() const {
+    return flow_id_;
+  }
+
 private:
+  uint64_t flow_id_;
   state state_;
   std::vector<Md5Info> uploading_block_md5s_;
   std::vector<std::weak_ptr<TcpConnection>> transfering_storage_servers_;

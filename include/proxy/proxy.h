@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 #include <functional>
 #include <cassert>
 
@@ -41,7 +42,11 @@ public:
 private:
   Server p1_server_;
   Server p2_server_;
-  std::set<std::shared_ptr<TcpConnection>> clients_;
+  using FlowType = uint64_t;
+
+  static FlowType get_flow_id();
+
+  std::map<FlowType, std::shared_ptr<TcpConnection>> clients_;
   std::set<std::shared_ptr<TcpConnection>> storage_servers_;
   IdStorage id_storage_;
   std::shared_ptr<spdlog::logger> logger_;
@@ -58,11 +63,13 @@ private:
 
   void handleClientUploadRequestMessage(std::shared_ptr<TcpConnection> client, const json&);
 
-  void handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> client, const json&);
+  void handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> client, json&);
 
   void handleClientUploadAllBlocksMessage(std::shared_ptr<TcpConnection> client, const json&);
 
   std::vector<Md5Info> getNeedUploadMd5s(const std::vector<Md5Info>& md5s);
+
+  void handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> client, const json&);
 };
 
 #endif // PROXY_H
