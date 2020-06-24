@@ -20,7 +20,7 @@ DEPS := $(SRCS:.cpp=.d)
 .PHONY : all
 all : $(OBJS)
 
-$(OBJS):%.out : %.cpp src/libfilest.a
+%.out : %.cpp src/libfilest.a
 	$(CXX) -o $@ $< -MMD -MP $(INCLUDE_PATH) $(LIBS) $(CXXFLAGS)
 
 src/libfilest.a :

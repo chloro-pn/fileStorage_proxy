@@ -12,8 +12,10 @@ fi
 
 ./proxy.out ../conf/proxy.conf > proxy.txt &
 echo "start proxy succ."
+sleep 3
 ./sserver.out > sserver.txt &
 echo "start sserver succ."
+sleep 3
 ./client.out > client.txt &
 echo "srart client succ."
 exit 0
