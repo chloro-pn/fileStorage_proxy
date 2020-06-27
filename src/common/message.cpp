@@ -172,6 +172,13 @@ Md5Info getFileIdFromDownLoadRequestMessage(const json& j) {
   return Md5Info(j["file_id"].get<std::string>());
 }
 
+std::string constructFileNotExistMessage(const Md5Info& md5) {
+  json j;
+  j["type"] = "file_not_exist";
+  j["file_id"] = md5.getMd5Value();
+  return j.dump();
+}
+
 //DOWNLOAD_BLOCK
 std::string constructDownLoadBlockMessage(Md5Info block) {
   json j;

@@ -70,6 +70,8 @@ private:
   std::vector<Md5Info> getNeedUploadMd5s(const std::vector<Md5Info>& md5s);
 
   void handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> client, const json&);
+
+  void requestBlockFromStorageServer(const Md5Info& md5, std::shared_ptr<TcpConnection> client);
 };
 
 #endif // PROXY_H

@@ -73,6 +73,8 @@ std::string constructDownLoadBlockMessage(Md5Info block);
 
 Md5Info getMD5FromDownLoadBlockMessage(const json& j);
 
+std::string constructFileNotExistMessage(const Md5Info& md5);
+
 //TRANSFER_BLOCK
 std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content);
 

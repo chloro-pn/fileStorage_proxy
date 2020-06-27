@@ -194,7 +194,28 @@ void Proxy::handleClientUploadAllBlocksMessage(std::shared_ptr<TcpConnection> co
   logger_->trace("change state to have_uploaded_all_blocks.");
 }
 
-void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> client, const json&) {
+void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> con, const json& j) {
+  Md5Info file_id = Message::getFileIdFromDownLoadRequestMessage(j);
+  bool exist = idStorage().findId(file_id);
+  if(exist == false) {
+    logger_->debug("client {} : file {} not exist. ",con->iport(), file_id.getMd5Value());
+    std::string message = Message::constructFileNotExistMessage(file_id);
+    con->send(message);
+    //don't change state.
+  }
+  else {
+    ClientContext* context = con->get_context<ClientContext>();
+    context->setState(ClientContext::state::waiting_transfer_block);
+    logger_->debug("client {} : state change  to waiting transfer block. ", con->iport());
+    auto tmp = idStorage().getMd5sFromId(file_id);
+    context->setTransferingBlockMd5s(tmp);
+    Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
+    requestBlockFromStorageServer(request_block, con);
+    context->moveToNextTransferBlockIndex();
+  }
+}
+
+void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<TcpConnection> client) {
 
 }
 
@@ -235,6 +256,27 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
     else if(message_type == "upload_all_blocks"){
       handleClientUploadAllBlocksMessage(con, message);
       return;
+    }
+    else {
+      logger_->error("error message type : {}", message_type);
+      con->force_close();
+      return;
+    }
+  }
+  else if(state == ClientContext::state::waiting_transfer_block) {
+    logger_->trace("client state : waiting transfer block");
+    if(message_type == "transfer_block") {
+      // client->send.
+      if(Message::theLastBlockPiece(message)) {
+        if(client->continueToTransferBlock()) {
+          client->moveToNextTransferBlockIndex();
+          Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
+          requestBlockFromStorageServer(md5, con);
+        }
+        else {
+          //change state to wait transfer all blocks message.
+        }
+      }
     }
     else {
       logger_->error("error message type : {}", message_type);
