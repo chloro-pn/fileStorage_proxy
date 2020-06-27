@@ -223,7 +223,24 @@ void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<Tc
     return;
   }
   std::shared_ptr<TcpConnection> server = selectStorageServer(servers);
+  std::string message = Message::constructDownLoadBlockMessage(md5);
+  server->send(std::move(message));
+}
 
+std::vector<std::shared_ptr<TcpConnection>> Proxy::findServersStoragedBlock(const Md5Info& md5) {
+  std::vector<std::shared_ptr<TcpConnection>> result;
+  for(auto& each : storage_servers_) {
+    StorageContext* context = each->get_context<StorageContext>();
+    if(context->find(md5) == true) {
+      result.push_back(each);
+    }
+  }
+  return result;
+}
+
+std::shared_ptr<TcpConnection> Proxy::selectStorageServer(const std::vector<std::shared_ptr<TcpConnection>>& ss) {
+  //just for current version.
+  return ss.front();
 }
 
 void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
@@ -278,12 +295,17 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
         Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
         requestBlockFromStorageServer(md5, con);
       }
-      else {
-        //change state to wait transfer all blocks message.
-        client->setState(ClientContext::state::have_transfered_all_blocks);
-        logger_->info("client : {} change state to have transfered all blocks. ");
+    }
+    else if(message_type == "transfer_all_blocks") {
+      if(client->continueToTransferBlock() != false) {
+        logger_->error("client {} has some blocks need to send.", con->iport());
+        con->force_close();
         return;
       }
+      //change state to wait transfer all blocks message.
+      client->setState(ClientContext::state::have_transfered_all_blocks);
+      logger_->info("client : {} change state to have transfered all blocks. ");
+      return;
     }
     else {
       logger_->error("error message type : {}", message_type);
