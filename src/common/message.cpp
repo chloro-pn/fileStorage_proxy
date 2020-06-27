@@ -192,14 +192,19 @@ Md5Info getMD5FromDownLoadBlockMessage(const json& j) {
 }
 
 //TRANSFER_BLOCK
-std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content) {
+std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, uint64_t flow_id, std::string&& content) {
   json j;
   j["type"] = "transfer_block";
   j["md5"] = md5.getMd5Value();
   j["index"] = index;
+  j["flow_id"] = flow_id;
   j["eof"] = eof;
   j["content"] = std::move(content);
   return j.dump();
+}
+
+uint64_t getFlowIdFromTransferBlockMessage(const json& j) {
+  return j["flow_id"].get<uint64_t>();
 }
 
 Md5Info getMd5FromTransferBlockMessage(const json& j) {

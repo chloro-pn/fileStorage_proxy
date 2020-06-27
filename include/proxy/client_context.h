@@ -15,6 +15,7 @@ public:
                      have_uploaded_all_blocks,
                      file_storage_succ,
                      waiting_transfer_block,
+                     have_transfered_all_blocks,
                      file_download_succ };
 
   ClientContext(uint64_t flow_id, std::shared_ptr<spdlog::logger> logger):

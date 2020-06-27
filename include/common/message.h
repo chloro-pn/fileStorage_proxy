@@ -76,7 +76,9 @@ Md5Info getMD5FromDownLoadBlockMessage(const json& j);
 std::string constructFileNotExistMessage(const Md5Info& md5);
 
 //TRANSFER_BLOCK
-std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, std::string&& content);
+std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bool eof, uint64_t flow_id, std::string&& content);
+
+uint64_t getFlowIdFromTransferBlockMessage(const json& j);
 
 Md5Info getMd5FromTransferBlockMessage(const json& j);
 

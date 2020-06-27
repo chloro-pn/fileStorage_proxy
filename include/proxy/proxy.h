@@ -72,6 +72,10 @@ private:
   void handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> client, const json&);
 
   void requestBlockFromStorageServer(const Md5Info& md5, std::shared_ptr<TcpConnection> client);
+
+  std::vector<std::shared_ptr<TcpConnection>> findServersStoragedBlock(const Md5Info& md5);
+
+  std::shared_ptr<TcpConnection> selectStorageServer(const std::vector<std::shared_ptr<TcpConnection>>& ss);
 };
 
 #endif // PROXY_H

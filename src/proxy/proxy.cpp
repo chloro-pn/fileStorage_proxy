@@ -216,6 +216,13 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
 }
 
 void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<TcpConnection> client) {
+  std::vector<std::shared_ptr<TcpConnection>> servers = findServersStoragedBlock(md5);
+  if(servers.empty() == true) {
+    logger_->error("block {} is not exist.", md5.getMd5Value());
+    client->force_close();
+    return;
+  }
+  std::shared_ptr<TcpConnection> server = selectStorageServer(servers);
 
 }
 
@@ -265,17 +272,17 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
   }
   else if(state == ClientContext::state::waiting_transfer_block) {
     logger_->trace("client state : waiting transfer block");
-    if(message_type == "transfer_block") {
-      // client->send.
-      if(Message::theLastBlockPiece(message)) {
-        if(client->continueToTransferBlock()) {
-          client->moveToNextTransferBlockIndex();
-          Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
-          requestBlockFromStorageServer(md5, con);
-        }
-        else {
-          //change state to wait transfer all blocks message.
-        }
+    if(message_type == "transfer_block_ack") {
+      if(client->continueToTransferBlock()) {
+        client->moveToNextTransferBlockIndex();
+        Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
+        requestBlockFromStorageServer(md5, con);
+      }
+      else {
+        //change state to wait transfer all blocks message.
+        client->setState(ClientContext::state::have_transfered_all_blocks);
+        logger_->info("client : {} change state to have transfered all blocks. ");
+        return;
       }
     }
     else {
@@ -300,9 +307,15 @@ void Proxy::clientOnClose(std::shared_ptr<TcpConnection> con) {
   ClientContext* context = con->get_context<ClientContext>();
   FlowType id = context->getFlowId();
   clients_.erase(id);
+
   if(context->getState() == ClientContext::state::have_uploaded_all_blocks) {
     context->setState(ClientContext::state::file_storage_succ);
-    logger_->trace("over.");
+    logger_->trace("file storage succ.");
+    return;
+  }
+  else if(context->getState() == ClientContext::state::have_transfered_all_blocks) {
+    context->setState(ClientContext::state::file_download_succ);
+    logger_->trace("file download succ");
     return;
   }
   else {
@@ -353,6 +366,18 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
       Md5Info md5_ack = Message::getMd5FromUploadBlockFailMessage(message);
       logger_->warn("handle on upload block fail, {} from {}", md5_ack.getMd5Value(), con->iport());
       storage->pubBlockAckEvent(md5_ack, false);
+    }
+    else if(message_type == "transfer_block") {
+      FlowType id = Message::getFlowIdFromTransferBlockMessage(message);
+      auto client = clients_.find(id);
+      if(client == clients_.end()) {
+        logger_->debug("client {} disconnect when transfering block. ", id);
+        con->force_close();
+        return;
+      }
+      std::string msg(con->message_data(), con->message_length());
+      client->second->send(std::move(msg));
+      return;
     }
     else {
       logger_->error("error message type : {} {}", message_type, con->iport());
