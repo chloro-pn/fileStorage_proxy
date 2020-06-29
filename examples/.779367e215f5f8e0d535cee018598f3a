@@ -1,2 +1,0 @@
-     console->set_level(spdlog::level::trace);
-        asio::io_

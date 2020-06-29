@@ -1,3 +1,0 @@
-context io_context;
-        //start agent.
-        Agent agent(i
