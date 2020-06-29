@@ -11,11 +11,11 @@ if [ $? -ne 0 ]; then
 fi
 
 ./proxy.out ../conf/proxy.conf > proxy.txt &
-echo "start proxy succ."
-sleep 3
+echo "starting proxy."
+sleep 2
 ./sserver.out > sserver.txt &
-echo "start sserver succ."
-sleep 3
+echo "starting sserver."
+sleep 2
 ./client.out > client.txt &
-echo "srart client succ."
+echo "srarting client."
 exit 0
