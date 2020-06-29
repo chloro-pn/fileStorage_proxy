@@ -3,13 +3,13 @@ INCLUDE_PATH := -I ../include -I ../third_party
 CXXFLAGS := -Wall -std=c++11
 
 #### spdlog ###
-INCLUDE_PATH += -I /home/pn/shared/spdlog-1.6.1/include
+INCLUDE_PATH += -I ../third_party/spdlog-1.6.1/include
 
 #### redis ###
 INCLUDE_PATH += -I /home/pn/shared/hiredis-0.14.1
 
 #### asio ###
-INCLUDE_PATH += -I /home/pn/shared/asio/include
+INCLUDE_PATH += -I ../third_party/asio/include
 
 SRCS := $(wildcard client/*.cpp) $(wildcard common/*.cpp) $(wildcard common/asio_wrapper/*.cpp) $(wildcard proxy/*.cpp sserver/*.cpp) $(wildcard ../third_party/*.cpp)
 
