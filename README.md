@@ -54,14 +54,22 @@ else {
 
 本项目使用第三方库redis，hiredis，spdlog，json，asio需要在src/makefile和examples/makefile中根据本机情况配置头文件路径和库文件路径。
 redis作为服务程序启动，端口号默认，asio和spdlog是header-only库，json我直接放到项目中了，不用配置。
+
 [update for 2020-06-29] spdlog和asio，json等库都被内置于third_party文件夹下，无需配置。
+
 ### 在云服务器上配置并启动
+
 1.安装redis服务并启动（经测试云服务器的环境无法编译redis 6.0以上版本，因此选择5.x版本）
+
 2.下载,编译并install hiredis v0.14.1，见 https://github.com/redis/hiredis/releases 。
 注：需要修改文件：/etc/ld.so.conf 添加共享库路径/usr/local/lib.
+
 3. hiredis的头文件和库文件路径修改src/makefile和examples/makefile文件。
+
 4. 编译 make -j4
+
 5. 启动服务 ./run_example.sh
+
 6. 在examples目录下查看日志文件*.txt，可以看到本次模拟上传的细节，在examples/file_storage_dir目录下是分块的文件，名称为块的md5值。
 说明：proxy对客户端开放的端口为12345，对存储服务器开放的端口为12346，可以在conf/proxy.conf中修改。
 
