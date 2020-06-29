@@ -64,14 +64,16 @@ redis作为服务程序启动，端口号默认，asio和spdlog是header-only库
 2.下载,编译并install hiredis v0.14.1，见 https://github.com/redis/hiredis/releases 。
 注：需要修改文件：/etc/ld.so.conf 添加共享库路径/usr/local/lib.
 
-3. hiredis的头文件和库文件路径修改src/makefile和examples/makefile文件。
+3.hiredis的头文件和库文件路径修改src/makefile和examples/makefile文件。
 
-4. 编译 make -j4
+4.编译 make -j4
 
-5. 启动服务 ./run_example.sh
+5.启动服务 ./run_example.sh
 
-6. 在examples目录下查看日志文件*.txt，可以看到本次模拟上传的细节，在examples/file_storage_dir目录下是分块的文件，名称为块的md5值。
+6.在examples目录下查看日志文件*.txt，可以看到本次模拟上传的细节，在examples/file_storage_dir目录下是分块的文件，名称为块的md5值。
 说明：proxy对客户端开放的端口为12345，对存储服务器开放的端口为12346，可以在conf/proxy.conf中修改。
+
+7.停止服务 ./stop_example.sh
 
 注：下一步预计开配置文件接口，开始的时候为了方便很多都写死在程序中了，现在调试很不方便。[doing]
 
