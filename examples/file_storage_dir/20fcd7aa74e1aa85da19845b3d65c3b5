@@ -1,2 +1,0 @@
-d::exception& e) {
-        std::cout << "exception : " << e.what
