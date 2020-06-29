@@ -10,7 +10,7 @@ int main() {
         asio::io_context io_context;
         //start agent.
         Agent agent(io_context, "127.0.0.1", "12345", console);
-        agent.uploadFile("/home/pn/asio/asio/client.cpp");
+        agent.uploadFile("client.cpp");
         io_context.run();
     }
     catch (std::exception& e) {
