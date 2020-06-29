@@ -1,0 +1,5 @@
+inks/stdout_sinks.h"
+#include <iostream>
+
+int main() {
+    try {

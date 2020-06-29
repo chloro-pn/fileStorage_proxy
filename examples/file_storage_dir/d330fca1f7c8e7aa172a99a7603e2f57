@@ -1,0 +1,3 @@
+
+        auto console = spdlog::stdout_logger_st("console");
+   
