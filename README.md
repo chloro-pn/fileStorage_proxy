@@ -12,6 +12,35 @@
 
 注：这个参数的具体含义正在问库作者，不知道是忽略检测还是忽略不合法数据。。。
 
+* 重要更新：为了支持用json库传输二进制文件，需要采用新的解析函数和序列化函数。
+
+之前解析：
+
+```c++
+std::string message;
+json j = json::parse(message);
+```
+
+现在解析：
+
+```c++
+json j = json::from_bson(ptr, n); // ptr为接收到的消息头部指针，n为消息长度。
+```
+
+之前序列化：
+```c++
+std::string message = j.dump();
+```
+
+现在序列化：
+```c++
+std::string message;
+json::to_bson(j, message);
+```
+如果使用message头文件中的函数构造发送消息则不用管，已经更新，但是解析消息需要用新的方法。
+
+更新版本目前新开了个分支bson_test，没有放到主分支，需要再测试下。
+
 4.完成选择合适的存储服务器函数。[done]
 
 5.proxy和sserver周期性的通信
