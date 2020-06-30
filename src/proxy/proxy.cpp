@@ -157,13 +157,18 @@ void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, j
     for(auto& each_server : storage_servers) {
       StorageContext* storage = each_server->get_context<StorageContext>();
       client->pushTransferingStorageServers(each_server);
-      each_server->send(j.dump());
+/*********** careful **************/
+      std::string message;
+      json::to_bson(j, message);
+      each_server->send(std::move(message));
+/**********************************/
       logger_->debug("sub block event. {}", info.getMd5Value());
       storage->subBlockAckEvent(info, cb);
     }
   }
   else {
-    std::string message = j.dump();
+    std::string message;
+    json::to_bson(j, message);
     for(auto& each_trans : client->getTransferingStorageServers()) {
       auto server = each_trans.lock();
       if(server) {
@@ -251,7 +256,7 @@ void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
 }
 
 void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
-  json message = json::parse(std::string(con->message_data(), con->message_length()));
+  json message = json::from_bson(con->message_data(), con->message_length());
   std::string message_type = Message::getType(message);
   ClientContext* client = con->get_context<ClientContext>();
   ClientContext::state state = client->getState();
@@ -354,7 +359,7 @@ void Proxy::storageOnConnection(std::shared_ptr<TcpConnection> con) {
 }
 
 void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
-  json message = json::parse(std::string(con->message_data(), con->message_length()));
+  json message = json::from_bson(con->message_data(), con->message_length());
   std::string message_type = Message::getType(message);
   StorageContext* storage = con->get_context<StorageContext>();
   if(storage->getState() == StorageContext::state::waiting_block_set) {

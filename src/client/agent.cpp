@@ -118,7 +118,7 @@ void Agent::onConnection(std::shared_ptr<TcpConnection> con) {
 
 void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
   AgentContext* context = con->get_context<AgentContext>();
-  json j = json::parse(std::string(con->message_data(), con->message_length()));
+  json j = json::from_bson(con->message_data(), con->message_length());
 
   if(context->getState() == AgentContext::state::waiting_upload_response) {
     if(Message::getType(j) == "upload_response") {

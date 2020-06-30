@@ -21,7 +21,7 @@ void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
 void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
   logger_->trace("on message.");
   StorageServerContext* context = con->get_context<StorageServerContext>();
-  json j = json::parse(std::string(con->message_data(), con->message_length()));
+  json j = json::from_bson(con->message_data(), con->message_length());
 
   if(Message::getType(j) == "upload_block") {
     Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
