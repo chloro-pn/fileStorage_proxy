@@ -39,9 +39,9 @@ std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
     }
     else {
       buf[n] = '\0';
-      MD5 md5(std::string(buf, n));
-      logger_->trace("md5 str : {}", md5.toStr());
-      result.push_back(inner_type_(Md5Info(md5.toStr()), start_point, n));
+      std::string md5_value = MD5(std::string(buf, n)).toStr();
+      logger_->trace("md5 str : {}", md5_value);
+      result.push_back(inner_type_(Md5Info(md5_value), start_point, n));
       start_point += n;
     }
   }
@@ -98,6 +98,7 @@ void Agent::sendBlockPieceFromCurrentPoint(std::shared_ptr<TcpConnection> con) {
 
 std::string Agent::getContentFromFile(const inner_type_& it, size_t offset, size_t send_length) {
   lseek(fd_, it.start_point + offset, SEEK_SET);
+  logger_->debug("file offset : {}, length : {}", it.start_point + offset, send_length);
   std::string str;
   str.resize(send_length, '\0');
   read(fd_, &*(str.begin()), send_length);

@@ -36,7 +36,7 @@ MD5::MD5(const string& message) {
   state[3] = 0x10325476;
 
   /* Initialization the object according to message. */
-  init((const byte*)message.c_str(), message.length());
+  init((const byte*)message.data(), message.length());
 }
 
 /**
