@@ -16,6 +16,6 @@ sleep 2
 ./sserver.out > sserver.txt &
 echo "starting sserver."
 sleep 2
-./client.out > client.txt &
-echo "srarting client."
+#./client.out > client.txt &
+#echo "srarting client."
 exit 0

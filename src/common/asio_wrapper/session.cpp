@@ -2,6 +2,7 @@
 #include "common/asio_wrapper/shared_buffer.h"
 #include "common/asio_wrapper/util.h"
 #include <cassert>
+#include <spdlog/spdlog.h>
 
 Session::Session(asio::io_context& io, tcp::socket socket) :
                  io_(io),
@@ -29,6 +30,7 @@ void Session::read_length() {
       if (!ec) {
         length_ = util::networkToHost(length_);
         if(length_ > sizeof(data_) - 1) {
+          spdlog::get("console")->debug("length : {} ", length_);	  
           tcp_connection_->set_state(TcpConnection::state::lengthError);
           onClose();
         }

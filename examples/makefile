@@ -31,5 +31,5 @@ src/libfilest.a :
 
 .PHONY : clean
 clean :
-	@rm -rf $(OBJS) $(DEPS) *.txt file_storage_dir/*;
+	@rm -rf $(OBJS) $(DEPS) *.txt file_storage_dir/* core.*
 
