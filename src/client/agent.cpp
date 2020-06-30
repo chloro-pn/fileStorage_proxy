@@ -14,8 +14,8 @@
 
 using nlohmann::json;
 
-#define BLOCK_SIZE 64 //64 byte for test.
-#define EACH_MESSAGE_SEND 20 // 20 byte for test.
+#define BLOCK_SIZE 64 * 1024 //64 byte for test.
+#define EACH_MESSAGE_SEND 1024 // 20 byte for test.
 
 std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
   std::vector<inner_type_> result;
@@ -67,14 +67,19 @@ void Agent::sendBlockPieceFromCurrentPoint(std::shared_ptr<TcpConnection> con) {
     return;
   }
   assert(current_uploading_index_ < upload_md5s_info_.size());
-  assert(current_block_offset_ < BLOCK_SIZE);
+  //assert(current_block_offset_ < BLOCK_SIZE);
+  if(current_block_offset_ >= BLOCK_SIZE) {
+    logger_->error("offset {} > block size {}.", current_block_offset_, BLOCK_SIZE);
+    spdlog::shutdown();
+    exit(-1);
+  }
   auto it = std::find_if(file_md5s_info_.begin(), file_md5s_info_.end(), [this](const inner_type_& tmp)->bool {
     return upload_md5s_info_[current_uploading_index_].getMd5Value() == tmp.md5.getMd5Value();
   });
   assert(it != file_md5s_info_.end());
   size_t send_length = EACH_MESSAGE_SEND;
   bool eof = false;
-  if(send_length + current_block_offset_ > it->length) {
+  if(send_length + current_block_offset_ >= it->length) {
     //for example.
     //length = 100, offset = 75, send_length = 30
     //so send_length = 100 - 75 = 25 byte.
@@ -94,9 +99,9 @@ void Agent::sendBlockPieceFromCurrentPoint(std::shared_ptr<TcpConnection> con) {
 std::string Agent::getContentFromFile(const inner_type_& it, size_t offset, size_t send_length) {
   lseek(fd_, it.start_point + offset, SEEK_SET);
   std::string str;
-  str.resize(send_length + 1, '\0');
+  str.resize(send_length, '\0');
   read(fd_, &*(str.begin()), send_length);
-  return str.c_str();
+  return str;
 }
 
 void Agent::onConnection(std::shared_ptr<TcpConnection> con) {

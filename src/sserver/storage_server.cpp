@@ -32,7 +32,6 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     if(Message::theLastBlockPiece(j) == true) {
       MD5 tmp(context->uploadingMd5s()[md5]);
       if(tmp.toStr() != md5.getMd5Value()) {
-        context->uploadingMd5s().erase(md5);
         std::string fail_message = Message::constructUploadBlockFailMessage(md5);
         logger_->warn("upload block fail. {} != {}", md5.getMd5Value(), tmp.toStr());
         con->send(fail_message);

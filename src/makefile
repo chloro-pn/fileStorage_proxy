@@ -6,7 +6,7 @@ CXXFLAGS := -Wall -std=c++11
 INCLUDE_PATH += -I ../third_party/spdlog-1.6.1/include
 
 #### redis ###
-INCLUDE_PATH += -I /file_storage/hiredis/hiredis-0.14.1
+INCLUDE_PATH += -I /home/pn/shared/hiredis-0.14.1
 
 #### asio ###
 INCLUDE_PATH += -I ../third_party/asio/include

@@ -49,7 +49,7 @@ private:
   tcp::socket socket_;
 
   uint32_t length_;
-  char data_[2049];
+  char data_[8096];
 
   callback on_message_;
   callback on_connection_;
