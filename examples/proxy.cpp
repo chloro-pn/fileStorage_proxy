@@ -15,6 +15,7 @@ int main(int argc, const char* argv[]) {
 
         //log init.
         auto console = spdlog::stdout_logger_st("console");
+        console->set_pattern("[%@] <%!> {%c} |%l| %v");
         console->set_level(spdlog::level::trace);
 
         //net init.

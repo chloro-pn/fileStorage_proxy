@@ -28,7 +28,7 @@ public:
   }
 
   void pubBlockAckEvent(const Md5Info& block, bool succ) {
-    logger_->debug("pub block event : {} {}", block.getMd5Value(), succ);
+    SPDLOG_LOGGER_DEBUG(logger_, "pub block event : {} {}", block.getMd5Value(), succ);
     if(block_ack_callbacks_.find(block) == block_ack_callbacks_.end()) {
       return;
     }
@@ -39,10 +39,9 @@ public:
   }
 
   void handleRemainEvent() {
-    logger_->warn("handle remain event.");
     for(auto& each_cbs : block_ack_callbacks_) {
       for(auto& each_cb : each_cbs.second) {
-        logger_->warn("{}, {}", each_cbs.first.getMd5Value(), false);
+        SPDLOG_LOGGER_WARN(logger_, "handle {} : {}", each_cbs.first.getMd5Value(), false);
         each_cb(each_cbs.first, false);
       }
     }

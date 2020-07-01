@@ -29,8 +29,7 @@ void Session::read_length() {
     [this, self](std::error_code ec, std::size_t length)->void {
       if (!ec) {
         length_ = util::networkToHost(length_);
-        if(length_ > sizeof(data_) - 1) {
-          spdlog::get("console")->debug("length : {} ", length_);	  
+        if(length_ > sizeof(data_) - 1) {  
           tcp_connection_->set_state(TcpConnection::state::lengthError);
           onClose();
         }

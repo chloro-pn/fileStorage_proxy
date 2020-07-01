@@ -83,7 +83,8 @@ public:
 
   void moveToNextTransferBlockIndex() {
     if(current_transfering_block_index_ >= transfering_block_md5s_.size()) {
-      logger_->critical("transfer block index out of range . {} -> {}", current_transfering_block_index_, transfering_block_md5s_.size());
+      //logger_->critical("transfer block index out of range . {} -> {}", current_transfering_block_index_, transfering_block_md5s_.size());
+      SPDLOG_LOGGER_CRITICAL(logger_, "transfer block index out of range. {} -> {}", current_transfering_block_index_, transfering_block_md5s_.size());
     }
     ++current_transfering_block_index_;
   }
