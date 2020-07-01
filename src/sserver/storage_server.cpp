@@ -26,9 +26,20 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
   if(Message::getType(j) == "upload_block") {
     Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
     //check if the same md5 block is uploading or have been stored in disk.
-    //#######bug.#######
+    uint64_t flow = Message::getFlowIdFromUploadBlockMessage(j);
     std::string content = Message::getContentFromUploadBlockMessage(j);
+
+    if(Message::theFirstBlockPiece(j) == true) {
+      if(context->uploadingFlowIds().find(md5) == context->uploadingFlowIds().end()) {
+        context->uploadingFlowIds()[md5] = flow;
+      }
+    }
+
+    if(context->uploadingFlowIds()[md5] != flow) {
+      return;
+    }
     context->uploadingMd5s()[md5].append(content);
+
     if(Message::theLastBlockPiece(j) == true) {
       std::string md5_value = MD5(context->uploadingMd5s()[md5]).toStr();
       if(md5_value != md5.getMd5Value()) {
@@ -36,6 +47,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
         logger_->warn("upload block fail. {} != {}", md5.getMd5Value(), md5_value);
         con->send(fail_message);
         context->uploadingMd5s().erase(md5);
+        context->uploadingFlowIds().erase(md5);
       }
       else {
         bool exist = pathStorage().checkItem(md5);
@@ -44,6 +56,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
           logger_->trace("block {} exist.send ack.", md5.getMd5Value());
           con->send(ack_message);
           context->uploadingMd5s().erase(md5);
+          context->uploadingFlowIds().erase(md5);
         }
         else {
           BlockFile bf;
@@ -59,6 +72,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
           logger_->trace("upload block ack. {}", md5.getMd5Value());
           con->send(ack_message);
           context->uploadingMd5s().erase(md5);
+          context->uploadingFlowIds().erase(md5);
         }
       }
     }

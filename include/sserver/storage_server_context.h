@@ -31,6 +31,10 @@ public:
       return uploading_md5s_;
   }
 
+  std::map<Md5Info, uint64_t>& uploadingFlowIds() {
+    return uploading_flow_ids_;
+  }
+
   std::string getBlockFilePath(const Md5Info& md5) {
       return base_path_ + md5.getMd5Value();
   }
@@ -41,6 +45,7 @@ private:
   std::vector<Md5Info> transfering_md5s_;
 
   std::map<Md5Info, std::string> uploading_md5s_;
+  std::map<Md5Info, uint64_t> uploading_flow_ids_;
   std::string base_path_;
 };
 
