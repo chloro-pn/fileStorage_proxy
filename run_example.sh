@@ -12,10 +12,9 @@ fi
 
 ./proxy.out ../conf/proxy.conf > proxy.txt &
 echo "starting proxy."
-sleep 2
+sleep 1
 ./sserver.out > sserver.txt &
 echo "starting sserver."
-sleep 2
 #./client.out > client.txt &
 #echo "srarting client."
 exit 0

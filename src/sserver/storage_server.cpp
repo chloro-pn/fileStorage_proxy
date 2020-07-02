@@ -146,11 +146,12 @@ void StorageServer::connectToProxyServer() {
 void StorageServer::sendSomeMd5sToProxy(std::shared_ptr<TcpConnection> con) {
   StorageServerContext* state = con->get_context<StorageServerContext>();
   std::vector<Md5Info> now_trans;
-  for(;state->nextToTransferMd5Index() < 16; ++(state->nextToTransferMd5Index())) {
+  for(int i = 0; i < 128; ++i) {
     if(state->nextToTransferMd5Index() >= state->transferingMd5s().size()) {
       break;
     }
     now_trans.push_back(state->transferingMd5s()[state->nextToTransferMd5Index()]);
+    ++state->nextToTransferMd5Index();
   }
   std::string message;
   if(state->nextToTransferMd5Index() >= state->transferingMd5s().size()) {
@@ -162,5 +163,6 @@ void StorageServer::sendSomeMd5sToProxy(std::shared_ptr<TcpConnection> con) {
   else {
     message = Message::constructTransferBlockSetMessage(now_trans, false);
   }
+  SPDLOG_LOGGER_DEBUG(logger_, "current index : {} ", state->nextToTransferMd5Index());
   con->send(std::move(message));
 }
