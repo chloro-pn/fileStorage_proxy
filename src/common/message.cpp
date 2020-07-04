@@ -1,6 +1,7 @@
 #include "common/message.h"
 #include "common/asio_wrapper/util.h"
 #include "json.hpp"
+#include "base64.h"
 #include <cstring>
 #include <cassert>
 
@@ -31,10 +32,7 @@ std::string createUploadRequestMessage(const std::vector<Md5Info> &md5s) {
   for(auto& each : md5s) {
     j["md5s"].push_back(each.getMd5Value());
   }
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::string createUploadResponseMessage(const std::vector<Md5Info>& md5s) {
@@ -43,10 +41,7 @@ std::string createUploadResponseMessage(const std::vector<Md5Info>& md5s) {
   for(auto& each : md5s) {
     j["md5s"].push_back(each.getMd5Value());
   }
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::vector<Md5Info> getMd5FromUploadResponseMessage(const json& j) {
@@ -69,11 +64,8 @@ std::string createUploadBlockMessage(const Md5Info &md5, uint32_t index, bool eo
   //client does not need to set it.
   j["flow_id"] = 0;
   j["eof"] = eof;
-  j["content"] = std::move(content);
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  j["content"] = base64_encode(content);
+  return j.dump();
 }
 
 void setFlowIdToUploadBlockMessage(json& j, uint64_t flow_id) {
@@ -97,47 +89,35 @@ Md5Info getMd5FromUploadBlockMessage(const json& j) {
 }
 
 std::string getContentFromUploadBlockMessage(const json &j) {
-  return j["content"].get<std::string>();
+  return base64_decode(j["content"].get<std::string>());
 }
 
 std::string constructUploadBlockAckMessage(const Md5Info& md5) {
   json j;
   j["type"] = "upload_block_ack";
   j["md5"] = md5.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::string constructUploadBlockFailMessage(const Md5Info& md5) {
   json j;
   j["type"] = "upload_block_fail";
   j["md5"] = md5.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::string constructFileStoreSuccMessage(Md5Info file_id) {
   json j;
   j["type"] = "file_storage_succ";
   j["file_id"] = file_id.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::string constructFileStoreFailMessage(Md5Info file_id) {
   json j;
   j["type"] = "file_storage_fail";
   j["file_id"] = file_id.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::vector<Md5Info> getMd5sFromTransferBlockSetMessage(const json& j) {
@@ -164,10 +144,7 @@ Md5Info getMd5FromUploadBlockFailMessage(const json &j) {
 std::string constructUploadAllBlocksMessage() {
   json j;
   j["type"] = "upload_all_blocks";
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 std::string constructTransferBlockSetMessage(const std::vector<Md5Info>& md5s, bool eof) {
@@ -177,10 +154,7 @@ std::string constructTransferBlockSetMessage(const std::vector<Md5Info>& md5s, b
     j["md5s"].push_back(each.getMd5Value());
   }
   j["eof"] = eof;
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 bool theLastTransferBlockSet(const json &j) {
@@ -192,10 +166,7 @@ std::string constructDownLoadRequestMessage(Md5Info file_id) {
   json j;
   j["type"] = "download_request";
   j["file_id"] = file_id.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 Md5Info getFileIdFromDownLoadRequestMessage(const json& j) {
@@ -206,10 +177,7 @@ std::string constructFileNotExistMessage(const Md5Info& md5) {
   json j;
   j["type"] = "file_not_exist";
   j["file_id"] = md5.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 //DOWNLOAD_BLOCK
@@ -217,10 +185,7 @@ std::string constructDownLoadBlockMessage(Md5Info block) {
   json j;
   j["type"] = "download_block";
   j["md5"] = block.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 Md5Info getMD5FromDownLoadBlockMessage(const json& j) {
@@ -235,11 +200,8 @@ std::string constructTransferBlockMessage(const Md5Info& md5, uint32_t index, bo
   j["index"] = index;
   j["flow_id"] = flow_id;
   j["eof"] = eof;
-  j["content"] = std::move(content);
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  j["content"] = base64_encode(content);
+  return j.dump();
 }
 
 uint64_t getFlowIdFromTransferBlockMessage(const json& j) {
@@ -251,7 +213,7 @@ Md5Info getMd5FromTransferBlockMessage(const json& j) {
 }
 
 std::string getContentFromTransferBlockMessage(const json& j) {
-  return j["content"].get<std::string>();
+  return base64_decode(j["content"].get<std::string>());
 }
 
 //TRANSFER_BLOCK_ACK
@@ -259,10 +221,7 @@ std::string constructTransferBlockAckMessage(const Md5Info& md5) {
   json j;
   j["type"] = "transfer_block_ack";
   j["md5"] = md5.getMd5Value();
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 
 Md5Info getMd5FromTransferBlockAckMessage(const json& j) {
@@ -273,9 +232,6 @@ Md5Info getMd5FromTransferBlockAckMessage(const json& j) {
 std::string constructTransferAllBlocksMessage() {
   json j;
   j["type"] = "transfer_all_blocks";
-  std::string result;
-  json::to_bson(j, result);
-  return result;
-  //return j.dump(-1, ' ', false, json::error_handler_t::ignore);
+  return j.dump();
 }
 } //namespace Message

@@ -14,8 +14,8 @@
 
 using nlohmann::json;
 
-#define BLOCK_SIZE 64 * 1024 //64 byte for test.
-#define EACH_MESSAGE_SEND 1024 // 20 byte for test.
+#define BLOCK_SIZE 64 * 1024 * 1024 //64 MB.
+#define EACH_MESSAGE_SEND 4096 // 4 kb for each send.
 
 std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
   std::vector<inner_type_> result;
@@ -26,9 +26,10 @@ std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
     exit(-1);
   }
   size_t start_point = 0;
-  char buf[BLOCK_SIZE + 1];
+  std::string buf;
+  buf.resize(BLOCK_SIZE);
   while(true) {
-    ssize_t n = read(fd_, buf, sizeof(buf) - 1);
+    ssize_t n = read(fd_, &*buf.begin(), BLOCK_SIZE);
     if(n < 0) {
       logger_->critical("file {} read error.", filepath);
       spdlog::shutdown();
@@ -38,9 +39,8 @@ std::vector<Agent::inner_type_> Agent::getMd5sFromFile(std::string filepath) {
       break;
     }
     else {
-      buf[n] = '\0';
-      std::string md5_value = MD5(std::string(buf, n)).toStr();
-      logger_->trace("md5 str : {}", md5_value);
+      buf.resize(n);
+      std::string md5_value = MD5(buf).toStr();
       result.push_back(inner_type_(Md5Info(md5_value), start_point, n));
       start_point += n;
     }
@@ -52,7 +52,7 @@ std::vector<Md5Info> Agent::getMd5sFromInnerType(const std::vector<inner_type_> 
   std::vector<Md5Info> result;
   for(auto& each : md5s) {
     result.push_back(each.md5);
-    logger_->trace("md5 : {}", each.md5.getMd5Value());
+    SPDLOG_LOGGER_DEBUG(logger_, "send md5 : {}", each.md5.getMd5Value());
   }
   return result;
 }
@@ -118,8 +118,9 @@ void Agent::onConnection(std::shared_ptr<TcpConnection> con) {
 }
 
 void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
+  usleep(10000); //for test , sleep 10ms.
   AgentContext* context = con->get_context<AgentContext>();
-  json j = json::from_bson(con->message_data(), con->message_length());
+  json j = json::parse(std::string(con->message_data(), con->message_length()));
 
   if(context->getState() == AgentContext::state::waiting_upload_response) {
     if(Message::getType(j) == "upload_response") {
@@ -177,7 +178,6 @@ void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
 }
 
 void Agent::onWriteComplete(std::shared_ptr<TcpConnection> con) {
-  logger_->trace("func : onWriteComplete.");
   AgentContext* context = con->get_context<AgentContext>();
   if(context->getState() != AgentContext::state::uploading_blocks) {
     return;
