@@ -52,7 +52,7 @@ private:
 
   void continue_to_send();
 
-  //void do_write(std::string&& content);
+  void do_write(std::string&& content);
 
   asio::io_context& io_;
   tcp::socket socket_;

@@ -176,33 +176,37 @@ void Session::continue_to_send() {
     });
   }
 }
-/*
+
 void Session::do_write(std::string&& content) {
-  auto self(shared_from_this());
-  MultiBuffer bufs;
-  //maybe need to check.
-  uint32_t n = content.length();
-  spdlog::get("console")->debug("length : {}", n);
+  uint32_t n = content.size();
   n = util::hostToNetwork(n);
-  bufs.insert(std::string((const char*)(&n), sizeof(n)));
-  bufs.insert(std::move(content));
-  asio::async_write(socket_, bufs,
-    [this, self](std::error_code ec, std::size_t length)->void {
-      if (!ec) {
-        onWriteComplete();
-        if(tcp_connection_->should_close()) {
-          onClose();
-        }
+  write_bufs_.push_back(std::string((const char*)(&n), sizeof(n)));
+  write_bufs_.push_back(std::move(content));
+  if(writing_ == true) {
+    return;
+  }
+  else {
+    MultiBuffer bufs;
+    for(const auto&  each : write_bufs_) {
+        bufs.insert(std::move(each));
+    }
+    write_bufs_.clear();
+    writing_ = true;
+    auto self(shared_from_this());
+    asio::async_write(socket_, bufs, [this, self](std::error_code ec, std::size_t /* length */)->void {
+      if(!ec) {
+        assert(writing_ == true);
+        continue_to_send();
       }
       else {
         tcp_connection_->set_state(TcpConnection::state::writeError);
         tcp_connection_->setError(ec.message());
         onClose();
       }
-    }
-  );
+    });
+  }
 }
-*/
+
 void Session::run_after(size_t ms, std::function<void(std::shared_ptr<TcpConnection>)> func) {
   std::shared_ptr<timer_type> timer(new timer_type(io_));
   timer->expires_after(std::chrono::milliseconds(ms));
