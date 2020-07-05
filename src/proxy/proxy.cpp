@@ -49,7 +49,6 @@ Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shar
   });
   SPDLOG_LOGGER_TRACE(logger_, "proxy server start.");
 }
-
 std::vector<std::shared_ptr<TcpConnection>> Proxy::selectSuitableStorageServers() const {
   size_t need_select_ss = Configure::instance().get<int>("block_backup_count");
   if(storage_servers_.size() < need_select_ss) {
@@ -204,7 +203,19 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     context->setState(ClientContext::state::waiting_transfer_block);
     SPDLOG_LOGGER_DEBUG(logger_, "client {} : state change  to waiting transfer block. ", con->iport());
     auto tmp = idStorage().getMd5sFromId(file_id);
-    context->setTransferingBlockMd5s(tmp);
+    std::vector<Md5Info> dont_need = Message::getHaveDownloadMd5sFromDownLoadRequestMessage(j);
+    std::vector<Md5Info> really_need;
+    for(auto& each : tmp) {
+      auto it = std::find_if(dont_need.begin(), dont_need.end(), [each](const Md5Info& md5)->bool {
+        return each.getMd5Value() == md5.getMd5Value();
+      });
+      if(it == dont_need.end()) {
+        // really need.
+        really_need.push_back(*it);
+      }
+    }
+
+    context->setTransferingBlockMd5s(really_need);
     Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
     requestBlockFromStorageServer(request_block, con);
     context->moveToNextTransferBlockIndex();
@@ -244,6 +255,7 @@ void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
   FlowType id = get_flow_id();
   con->set_context(std::make_shared<ClientContext>(id, logger_));
   clients_[id] = con;
+  con->get_next_message();
 }
 
 void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
@@ -255,11 +267,9 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
     SPDLOG_LOGGER_TRACE(logger_, "client state : init");
     if(message_type == "upload_request") {
       handleClientUploadRequestMessage(con, message);
-      return;
     }
     else if(message_type == "download_request") {
       handleClientDownloadRequestMessage(con, message);
-      return;
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {}", message_type);
@@ -270,11 +280,9 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
   else if(state == ClientContext::state::waiting_upload_block) {
     if(message_type == "upload_block" ) {
       handleClientUploadBlockMessage(con, message);
-      return;
     }
     else if(message_type == "upload_all_blocks"){
       handleClientUploadAllBlocksMessage(con, message);
-      return;
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {}", message_type);
@@ -299,7 +307,6 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
       //change state to wait transfer all blocks message.
       client->setState(ClientContext::state::have_transfered_all_blocks);
       SPDLOG_LOGGER_INFO(logger_, "client : {} change state to have transfered all blocks. ", con->iport());
-      return;
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {}", message_type);
@@ -311,6 +318,7 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
     SPDLOG_LOGGER_ERROR(logger_, "should not look at this.");
     con->force_close();
   }
+  con->get_next_message();
 }
 
 void Proxy::clientOnClose(std::shared_ptr<TcpConnection> con) {
@@ -346,6 +354,7 @@ void Proxy::storageOnConnection(std::shared_ptr<TcpConnection> con) {
   StorageContext* storage = con->get_context<StorageContext>();
   storage->setState(StorageContext::state::waiting_block_set);
   storage_servers_.insert(con);
+  con->get_next_message();
 }
 
 void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
@@ -394,7 +403,6 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
       }
       std::string msg(con->message_data(), con->message_length());
       client->second->send(std::move(msg));
-      return;
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {} {}", message_type, con->iport());
@@ -402,6 +410,7 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
       return;
     }
   }
+  con->get_next_message();
 }
 
 void Proxy::storageOnClose(std::shared_ptr<TcpConnection> con) {

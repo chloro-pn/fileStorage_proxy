@@ -6,6 +6,7 @@
 #include "timer.h"
 #include <functional>
 #include <memory>
+#include <string>
 
 using asio::ip::tcp;
 
@@ -17,6 +18,10 @@ public:
   Session(asio::io_context& io, tcp::socket socket);
 
   void start();
+
+  void read_next_message() {
+    read_length();
+  }
 
   void setOnMessage(const callback& cb) {
     on_message_ = cb;
@@ -41,15 +46,22 @@ private:
 
   void read_body();
 
+  //void do_write(const std::string& content);
+
   void do_write(const std::string& content);
 
-  void do_write(std::string&& content);
+  void continue_to_send();
+
+  //void do_write(std::string&& content);
 
   asio::io_context& io_;
   tcp::socket socket_;
 
   uint32_t length_;
   char data_[65535];
+
+  bool writing_;
+  std::vector<std::string> write_bufs_;
 
   callback on_message_;
   callback on_connection_;
@@ -58,6 +70,10 @@ private:
   callback on_write_complete_;
 
   std::shared_ptr<TcpConnection> tcp_connection_;
+
+  bool closed() const {
+    return have_closed_;
+  }
 
   void onMessage() {
     if(on_message_) {

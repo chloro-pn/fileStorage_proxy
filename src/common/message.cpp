@@ -162,11 +162,25 @@ bool theLastTransferBlockSet(const json &j) {
 }
 
 //DOWNLOAD_REQUEST
-std::string constructDownLoadRequestMessage(Md5Info file_id) {
+std::string constructDownLoadRequestMessage(Md5Info file_id, const std::vector<Md5Info>& dont_need) {
   json j;
   j["type"] = "download_request";
   j["file_id"] = file_id.getMd5Value();
+  for(auto& each : dont_need) {
+    j["md5s"] = each.getMd5Value();
+  }
   return j.dump();
+}
+
+std::vector<Md5Info> getHaveDownloadMd5sFromDownLoadRequestMessage(const json& j) {
+  std::vector<Md5Info> result;
+  if(j.contains("md5s") == false) {
+    return result;
+  }
+  for(json::const_iterator it = j["md5s"].begin(); it != j["md5s"].end(); ++it) {
+    result.push_back(Md5Info(it->get<std::string>()));
+  }
+  return result;
 }
 
 Md5Info getFileIdFromDownLoadRequestMessage(const json& j) {

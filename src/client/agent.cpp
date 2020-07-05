@@ -114,14 +114,13 @@ void Agent::onConnection(std::shared_ptr<TcpConnection> con) {
     con->send(message);
     logger_->trace("change state to waiting upload response.");
     context->setState(AgentContext::state::waiting_upload_response);
+    con->get_next_message();
   }
 }
 
 void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
-  usleep(10000); //for test , sleep 10ms.
   AgentContext* context = con->get_context<AgentContext>();
   json j = json::parse(std::string(con->message_data(), con->message_length()));
-
   if(context->getState() == AgentContext::state::waiting_upload_response) {
     if(Message::getType(j) == "upload_response") {
       upload_md5s_info_ = Message::getMd5FromUploadResponseMessage(j);
@@ -175,6 +174,7 @@ void Agent::onMessage(std::shared_ptr<TcpConnection> con) {
       con->force_close();
     }
   }
+  con->get_next_message();
 }
 
 void Agent::onWriteComplete(std::shared_ptr<TcpConnection> con) {

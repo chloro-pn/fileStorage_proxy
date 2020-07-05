@@ -20,6 +20,10 @@ TcpConnection::TcpConnection(Session& sess):
   iport_.append(std::to_string(pport));
 }
 
+void TcpConnection::get_next_message() {
+  session_.read_next_message();
+}
+
 void TcpConnection::send(const std::string& str) {
   session_.do_write(str);
 }

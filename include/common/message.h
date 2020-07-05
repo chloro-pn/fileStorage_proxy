@@ -64,7 +64,9 @@ std::string constructTransferBlockSetMessage(const std::vector<Md5Info>& md5s, b
 bool theLastTransferBlockSet(const json& j);
 
 //DOWNLOAD_REQUEST
-std::string constructDownLoadRequestMessage(Md5Info file_id);
+std::string constructDownLoadRequestMessage(Md5Info file_id, const std::vector<Md5Info>& dont_need);
+
+std::vector<Md5Info> getHaveDownloadMd5sFromDownLoadRequestMessage(const json& j);
 
 Md5Info getFileIdFromDownLoadRequestMessage(const json& j);
 

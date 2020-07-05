@@ -13,6 +13,8 @@ public:
 
   TcpConnection(Session& sess);
 
+  void get_next_message();
+
   void send(const std::string& str);
 
   void send(std::string&& str);

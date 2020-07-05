@@ -16,6 +16,7 @@ void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
   state->setState(StorageServerContext::state::transfering_block_set);
   state->transferingMd5s() = pathStorage().getAllItems();
   sendSomeMd5sToProxy(con);
+  con->get_next_message();
 }
 
 void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
@@ -36,7 +37,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     }
 
     if(context->uploadingFlowIds()[md5] != flow) {
-      return;
+      goto end_point;
     }
     context->uploadingMd5s()[md5].append(content);
 
@@ -82,6 +83,9 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     con->force_close();
     return;
   }
+
+  end_point:
+  con->get_next_message();
 }
 
 void StorageServer::onWriteComplete(std::shared_ptr<TcpConnection> con) {

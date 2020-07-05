@@ -8,6 +8,7 @@ Session::Session(asio::io_context& io, tcp::socket socket) :
                  io_(io),
                  socket_(std::move(socket)),
                  length_(0),
+                 writing_(false),
                  have_closed_(false),
                  tcp_connection_(std::make_shared<TcpConnection>(*this)) {
 
@@ -17,9 +18,6 @@ void Session::start() {
   onConnection();
   if(tcp_connection_->should_close()) {
     onClose();
-  }
-  else {
-    read_length();
   }
 }
 
@@ -31,6 +29,7 @@ void Session::read_length() {
         length_ = util::networkToHost(length_);
         if(length_ > sizeof(data_) - 1) {  
           tcp_connection_->set_state(TcpConnection::state::lengthError);
+          spdlog::get("console")->critical("length : {}", length_);
           onClose();
         }
         else {
@@ -60,9 +59,6 @@ void Session::read_body() {
         if(tcp_connection_->should_close()) {
           onClose();
         }
-        else {
-          read_length();
-        }
       }
       else {
         if(ec == asio::error::eof) {
@@ -85,16 +81,30 @@ void Session::read_body() {
   );
 }
 
+/*
 void Session::do_write(const std::string& content) {
+  //if async_writing_ == true.
+  // push in write_bufs.
+  // else
+  // get all write_bufs.
+  // async_writing_ = true.
+  // async_write.
+  // callback :
+  // if write_bufs.empty() == false.
+  //    continue to async_write and callback.
+  // else
+  //    on writecomplete.
+  //    async_writing_ = false.
   auto self(shared_from_this());
   MultiBuffer bufs;
   //maybe need to check.
   uint32_t n = content.length();
+  spdlog::get("console")->debug("length : {}", n);
   n = util::hostToNetwork(n);
   bufs.insert(std::string((const char*)(&n), sizeof(n)));
   bufs.insert(content);
   asio::async_write(socket_, bufs,
-    [this, self](std::error_code ec, std::size_t /*length*/)->void {
+    [this, self](std::error_code ec, std::size_t length)->void {
       if (!ec) {
         onWriteComplete();
         if(tcp_connection_->should_close()) {
@@ -109,17 +119,75 @@ void Session::do_write(const std::string& content) {
     }
   );
 }
+*/
+void Session::do_write(const std::string &content) {
+  uint32_t n = content.size();
+  n = util::hostToNetwork(n);
+  write_bufs_.push_back(std::string((const char*)(&n), sizeof(n)));
+  write_bufs_.push_back(content);
+  if(writing_ == true) {
+    return;
+  }
+  else {
+    MultiBuffer bufs;
+    for(const auto&  each : write_bufs_) {
+        bufs.insert(std::move(each));
+    }
+    write_bufs_.clear();
+    writing_ = true;
+    auto self(shared_from_this());
+    asio::async_write(socket_, bufs, [this, self](std::error_code ec, std::size_t /* length */)->void {
+      if(!ec) {
+        assert(writing_ == true);
+        continue_to_send();
+      }
+      else {
+        tcp_connection_->set_state(TcpConnection::state::writeError);
+        tcp_connection_->setError(ec.message());
+        onClose();
+      }
+    });
+  }
+}
 
+void Session::continue_to_send() {
+  assert(writing_ == true);
+  if(write_bufs_.empty() == true) {
+    writing_ = false;
+    onWriteComplete();
+  }
+  else {
+    MultiBuffer bufs;
+    for(const auto&  each : write_bufs_) {
+        bufs.insert(std::move(each));
+    }
+    write_bufs_.clear();
+    auto self(shared_from_this());
+    asio::async_write(socket_, bufs, [this, self](std::error_code ec, std::size_t /* length */)->void {
+      if(!ec) {
+        assert(writing_ == true);
+        continue_to_send();
+      }
+      else {
+        tcp_connection_->set_state(TcpConnection::state::writeError);
+        tcp_connection_->setError(ec.message());
+        onClose();
+      }
+    });
+  }
+}
+/*
 void Session::do_write(std::string&& content) {
   auto self(shared_from_this());
   MultiBuffer bufs;
   //maybe need to check.
   uint32_t n = content.length();
+  spdlog::get("console")->debug("length : {}", n);
   n = util::hostToNetwork(n);
   bufs.insert(std::string((const char*)(&n), sizeof(n)));
   bufs.insert(std::move(content));
   asio::async_write(socket_, bufs,
-    [this, self](std::error_code ec, std::size_t /*length*/)->void {
+    [this, self](std::error_code ec, std::size_t length)->void {
       if (!ec) {
         onWriteComplete();
         if(tcp_connection_->should_close()) {
@@ -134,7 +202,7 @@ void Session::do_write(std::string&& content) {
     }
   );
 }
-
+*/
 void Session::run_after(size_t ms, std::function<void(std::shared_ptr<TcpConnection>)> func) {
   std::shared_ptr<timer_type> timer(new timer_type(io_));
   timer->expires_after(std::chrono::milliseconds(ms));
