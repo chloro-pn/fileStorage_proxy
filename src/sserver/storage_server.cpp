@@ -143,7 +143,9 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
       exit(-1);
     }
     else {
-      download_context[flow_id] = { need_md5, 0, 0};
+      //download_context[flow_id] = std::make_tuple<Md5Info, size_t, uint32_t>(need_md5, 0, 0);
+      std::tuple<Md5Info, size_t, uint32_t> tmp(need_md5, 0, 0);
+      download_context[flow_id] = tmp;
     }
     sendSomeMd5PieceToProxy(con);
   }
