@@ -6,6 +6,8 @@
 #include "common/message.h"
 #include "md5.h"
 #include <vector>
+#include <cassert>
+#include <tuple>
 
 using nlohmann::json;
 
@@ -17,6 +19,51 @@ void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
   state->transferingMd5s() = pathStorage().getAllItems();
   sendSomeMd5sToProxy(con);
   con->get_next_message();
+}
+
+void StorageServer::sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con) {
+  StorageServerContext* context = con->get_context<StorageServerContext>();
+  auto& download_context = context->downloadingContext();
+  if(download_context.empty() == true) {
+    //nothing to send.
+    return;
+  }
+  auto need = download_context.begin();
+  uint64_t flow_id = need->first;
+  Md5Info md5 = std::get<0>(need->second);
+  size_t& offset = std::get<1>(need->second);
+  uint32_t& index = std::get<2>(need->second);
+
+  const constexpr size_t each_send_size = 4096;
+  if(context->downloadingMd5s().find(md5) == context->downloadingMd5s().end()) {
+    SPDLOG_LOGGER_CRITICAL(logger_, "need md5 not exist.");
+    spdlog::shutdown();
+    exit(-1);
+  }
+  std::string& md5_content = context->downloadingMd5s()[md5].second;
+  uint32_t& ref = context->downloadingMd5s()[md5].first;
+  assert(ref > 0);
+
+  if(offset + each_send_size >= md5_content.size()) {
+    std::string tmp = md5_content.substr(offset, md5_content.size() - offset);
+    std::string message = Message::constructTransferBlockMessage(md5, index, true, flow_id, std::move(tmp));
+    con->send(std::move(message));
+    //clean
+    download_context.erase(flow_id);
+    //--md5's ref.
+    --ref;
+    if(ref == 0) {
+      context->downloadingMd5s().erase(md5);
+    }
+  }
+  else {
+    std::string tmp = md5_content.substr(offset, each_send_size);
+    std::string message = Message::constructTransferBlockMessage(md5, index, false, flow_id, std::move(tmp));
+    con->send(std::move(message));
+    //update context;
+    offset += each_send_size;
+    index += 1;
+  }
 }
 
 void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
@@ -78,6 +125,28 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
       }
     }
   }
+  else if(Message::getType(j) == "download_block") {
+    uint64_t flow_id = Message::getFlowIdFromDownLoadBlockMessage(j);
+    Md5Info need_md5 = Message::getMD5FromDownLoadBlockMessage(j);
+    if(context->downloadingMd5s().find(need_md5) == context->downloadingMd5s().end()) {
+      std::string mc = pathStorage().getMd5ContentFromStorage(need_md5);
+      context->downloadingMd5s()[need_md5] = {0, std::move(mc)};
+    }
+    else {
+      // add ref.
+      context->downloadingMd5s()[need_md5].first += 1;
+    }
+    auto& download_context = context->downloadingContext();
+    if(download_context.find(flow_id) != download_context.end()) {
+      SPDLOG_LOGGER_CRITICAL(logger_, "replicate md5 on the same flow id : {}, {}", need_md5.getMd5Value(), flow_id);
+      spdlog::shutdown();
+      exit(-1);
+    }
+    else {
+      download_context[flow_id] = { need_md5, 0, 0};
+    }
+    sendSomeMd5PieceToProxy(con);
+  }
   else {
     logger_->error("error state.");
     con->force_close();
@@ -96,8 +165,7 @@ void StorageServer::onWriteComplete(std::shared_ptr<TcpConnection> con) {
     logger_->trace("continue to send block md5 sets.");
   }
   else if(context->getState() == StorageServerContext::state::working) {
-    //continue sending block.
-    //if current block send over.
+    sendSomeMd5PieceToProxy(con);
   }
   else {
     logger_->error("error state.");

@@ -217,12 +217,12 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
 
     context->setTransferingBlockMd5s(really_need);
     Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
-    requestBlockFromStorageServer(request_block, con);
+    requestBlockFromStorageServer(request_block, con, context->getFlowId());
     context->moveToNextTransferBlockIndex();
   }
 }
 
-void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<TcpConnection> client) {
+void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<TcpConnection> client, uint64_t flow_id) {
   std::vector<std::shared_ptr<TcpConnection>> servers = findServersStoragedBlock(md5);
   if(servers.empty() == true) {
     SPDLOG_LOGGER_ERROR(logger_, "block {} is not exist.", md5.getMd5Value());
@@ -230,7 +230,7 @@ void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<Tc
     return;
   }
   std::shared_ptr<TcpConnection> server = selectStorageServer(servers);
-  std::string message = Message::constructDownLoadBlockMessage(md5);
+  std::string message = Message::constructDownLoadBlockMessage(md5, flow_id);
   server->send(std::move(message));
 }
 
@@ -295,7 +295,7 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
       if(client->continueToTransferBlock()) {
         client->moveToNextTransferBlockIndex();
         Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
-        requestBlockFromStorageServer(md5, con);
+        requestBlockFromStorageServer(md5, con, client->getFlowId());
       }
     }
     else if(message_type == "transfer_all_blocks") {

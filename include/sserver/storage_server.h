@@ -24,6 +24,8 @@ public:
 
   void onClose(std::shared_ptr<TcpConnection> con);
 
+  void sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con);
+
   PathStorage& pathStorage() {
     return ds_;
   }

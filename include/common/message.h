@@ -71,9 +71,11 @@ std::vector<Md5Info> getHaveDownloadMd5sFromDownLoadRequestMessage(const json& j
 Md5Info getFileIdFromDownLoadRequestMessage(const json& j);
 
 //DOWNLOAD_BLOCK
-std::string constructDownLoadBlockMessage(Md5Info block);
+std::string constructDownLoadBlockMessage(Md5Info block, uint64_t flow_id);
 
 Md5Info getMD5FromDownLoadBlockMessage(const json& j);
+
+uint64_t getFlowIdFromDownLoadBlockMessage(const json& j);
 
 std::string constructFileNotExistMessage(const Md5Info& md5);
 

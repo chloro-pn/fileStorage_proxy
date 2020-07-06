@@ -6,6 +6,8 @@
 
 class Md5Info {
 public:
+  Md5Info() = default;
+
   Md5Info(const char* ptr, size_t n):md5_value_(ptr, n) {
     assert(n == 32);
   }

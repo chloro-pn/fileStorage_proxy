@@ -4,6 +4,7 @@
 #include "common/md5_info.h"
 #include "spdlog/spdlog.h"
 #include "hiredis.h"
+#include "block_file.h"
 #include <vector>
 
 class PathStorage {
@@ -55,6 +56,17 @@ public:
       exit(-1);
     }
     return std::string(reply->str, reply->len);
+  }
+
+  std::string getMd5ContentFromStorage(const Md5Info& md5) const {
+    BlockFile md5content;
+    bool succ = md5content.openExistfile(getPath(md5));
+    if(succ == false) {
+      SPDLOG_LOGGER_CRITICAL(logger_, "open error.");
+      spdlog::shutdown();
+      exit(-1);
+    }
+    return md5content.readBlock();
   }
 
   ~PathStorage();

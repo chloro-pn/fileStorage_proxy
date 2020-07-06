@@ -195,15 +195,20 @@ std::string constructFileNotExistMessage(const Md5Info& md5) {
 }
 
 //DOWNLOAD_BLOCK
-std::string constructDownLoadBlockMessage(Md5Info block) {
+std::string constructDownLoadBlockMessage(Md5Info block, uint64_t flow_id) {
   json j;
   j["type"] = "download_block";
   j["md5"] = block.getMd5Value();
+  j["flow_id"] = flow_id;
   return j.dump();
 }
 
 Md5Info getMD5FromDownLoadBlockMessage(const json& j) {
   return Md5Info(j["md5"].get<std::string>());
+}
+
+uint64_t getFlowIdFromDownLoadBlockMessage(const json& j) {
+  return j["flow_id"].get<uint64_t>();
 }
 
 //TRANSFER_BLOCK

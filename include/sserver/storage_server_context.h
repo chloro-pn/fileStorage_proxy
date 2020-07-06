@@ -4,6 +4,7 @@
 #include "path_storage.h"
 #include <map>
 #include <vector>
+#include <tuple>
 
 class StorageServerContext {
 public:
@@ -39,6 +40,14 @@ public:
       return base_path_ + md5.getMd5Value();
   }
 
+  std::map<Md5Info, std::pair<uint32_t, std::string>>& downloadingMd5s() {
+    return downloading_md5s_;
+  }
+
+  std::map<uint64_t, std::tuple<Md5Info, size_t, uint32_t>>& downloadingContext() {
+    return downloading_context_;
+  }
+
 private:
   state state_;
   size_t next_to_transfer_md5_index_;
@@ -46,6 +55,11 @@ private:
 
   std::map<Md5Info, std::string> uploading_md5s_;
   std::map<Md5Info, uint64_t> uploading_flow_ids_;
+
+  //md5, ref and file_block.
+  std::map<Md5Info, std::pair<uint32_t, std::string>> downloading_md5s_;
+  //flow_id, md5 and current_offset
+  std::map<uint64_t, std::tuple<Md5Info, size_t, uint32_t>> downloading_context_;
   std::string base_path_;
 };
 
