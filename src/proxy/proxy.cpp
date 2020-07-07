@@ -220,7 +220,7 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     context->setTransferingBlockMd5s(really_need);
     Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
     requestBlockFromStorageServer(request_block, con, context->getFlowId());
-    context->moveToNextTransferBlockIndex();
+    //context->moveToNextTransferBlockIndex();
   }
 }
 

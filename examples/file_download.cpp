@@ -4,6 +4,7 @@
 #include "common/asio_wrapper/util.h"
 #include "common/message.h"
 #include "json.hpp"
+#include "unistd.h"
 
 using asio::ip::tcp;
 using namespace nlohmann;
@@ -50,8 +51,12 @@ int main(int argc, const char* argv[]) {
   std::string message = Message::constructDownLoadRequestMessage(Md5Info(argv[1]), {});
   send_message(sock, message);
   std::cout << "send succ. " << std::endl;
-
-  std::string content;
+  int fd = open("download", O_WRONLY | O_CREAT | O_TRUNC);
+  if(fd < 0) {
+    std::cerr << "file open error. " << std::endl;
+    std::cerr << strerror(errno) << std::endl;
+    return -1;
+  }
   while(true) {
     message = read_message(sock);
     json j = json::parse(message);
@@ -62,7 +67,13 @@ int main(int argc, const char* argv[]) {
       std::cerr << "error message type : " << Message::getType(j) << std::endl;
       return -1;
     }
-    content.append(Message::getContentFromTransferBlockMessage(j));
+    std::string content = Message::getContentFromTransferBlockMessage(j);
+    ssize_t n = write(fd, content.data(), content.size());
+    if(n != content.size()) {
+      std::cerr << "file write error. " << std::endl;
+      std::cout << strerror(errno) << std::endl;
+      return -1;
+    }
     if(Message::theLastBlockPiece(j) == true) {
       std::cout << "the last piece" << std::endl;
       Md5Info md5 = Message::getMd5FromTransferBlockMessage(j);
@@ -72,6 +83,6 @@ int main(int argc, const char* argv[]) {
       std::cout << "send succ. " << std::endl;
     }
   }
-  std::cout << "get file size : " << content.size() << std::endl;
+  std::cout << "file storage succ. " << std::endl;
   return 0;
 }
