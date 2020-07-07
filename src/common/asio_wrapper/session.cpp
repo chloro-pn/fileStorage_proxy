@@ -133,7 +133,6 @@ void Session::do_write(const std::string &content) {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
         bufs.insert(std::move(each));
-        spdlog::get("console")->trace("continue to send {}", each);
     }
     write_bufs_.clear();
     writing_ = true;
@@ -156,13 +155,11 @@ void Session::continue_to_send() {
   assert(writing_ == true);
   if(write_bufs_.empty() == true) {
     writing_ = false;
-    spdlog::get("console")->trace("send over.");
     onWriteComplete();
   }
   else {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
-      spdlog::get("console")->trace("continue to send {}", each);
         bufs.insert(std::move(each));
     }
     write_bufs_.clear();
@@ -187,13 +184,11 @@ void Session::do_write(std::string&& content) {
   write_bufs_.push_back(std::string((const char*)(&n), sizeof(n)));
   write_bufs_.push_back(std::move(content));
   if(writing_ == true) {
-    spdlog::get("console")->trace("writing, return.");
     return;
   }
   else {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
-      spdlog::get("console")->trace("continue to send {}", each);
       bufs.insert(std::move(each));
     }
     write_bufs_.clear();
@@ -220,13 +215,15 @@ void Session::run_after(size_t ms, std::function<void(std::shared_ptr<TcpConnect
   timer->async_wait(
     [func, self, timer](const std::error_code& error)->void {
       if(!error) {
-        std::cout << "wake up!" << std::endl;
         std::shared_ptr<Session> myself = self.lock();
         if(myself) {
+          if(myself->closed() == true) {
+            std::cerr << "closed before timer timeout." << std::endl;
+            return;
+          }
           func(myself->tcp_connection_);
         }
         else {
-          std::cout << "have been closed." << std::endl;
           return;
         }
       }

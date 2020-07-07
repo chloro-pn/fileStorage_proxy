@@ -63,7 +63,6 @@ int main(int argc, const char* argv[]) {
       return -1;
     }
     content.append(Message::getContentFromTransferBlockMessage(j));
-    std::cout << "current content : " << content << std::endl;
     if(Message::theLastBlockPiece(j) == true) {
       std::cout << "the last piece" << std::endl;
       Md5Info md5 = Message::getMd5FromTransferBlockMessage(j);
@@ -73,6 +72,6 @@ int main(int argc, const char* argv[]) {
       std::cout << "send succ. " << std::endl;
     }
   }
-  std::cout << "get file : " << content << std::endl;
+  std::cout << "get file size : " << content.size() << std::endl;
   return 0;
 }
