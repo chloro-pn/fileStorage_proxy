@@ -16,12 +16,24 @@ public:
     assert(str.length() == 32);
   }
 
+  Md5Info(const Md5Info&) = default;
+
+  Md5Info(Md5Info&&) = default;
+
+  Md5Info& operator=(const Md5Info&) = default;
+
+  Md5Info& operator=(Md5Info&&) = default;
+
   const std::string& getMd5Value() const {
     return md5_value_;
   }
 
   bool operator<(const Md5Info& other) const {
     return md5_value_ < other.md5_value_;
+  }
+
+  bool operator==(const Md5Info other) const {
+    return md5_value_ == other.md5_value_;
   }
 
 private:

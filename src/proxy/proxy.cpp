@@ -6,6 +6,7 @@
 #include "json.hpp"
 #include <cstdlib>
 #include <memory>
+#include <algorithm>
 #include <vector>
 
 using nlohmann::json;
@@ -205,16 +206,17 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     auto tmp = idStorage().getMd5sFromId(file_id);
     std::vector<Md5Info> dont_need = Message::getHaveDownloadMd5sFromDownLoadRequestMessage(j);
     std::vector<Md5Info> really_need;
+
     for(auto& each : tmp) {
       auto it = std::find_if(dont_need.begin(), dont_need.end(), [each](const Md5Info& md5)->bool {
         return each.getMd5Value() == md5.getMd5Value();
       });
       if(it == dont_need.end()) {
         // really need.
-        really_need.push_back(*it);
+        really_need.push_back(each);
       }
     }
-
+    SPDLOG_LOGGER_DEBUG(logger_, "total {} , really need {}.", tmp.size(), really_need.size());
     context->setTransferingBlockMd5s(really_need);
     Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
     requestBlockFromStorageServer(request_block, con, context->getFlowId());
@@ -232,6 +234,7 @@ void Proxy::requestBlockFromStorageServer(const Md5Info &md5, std::shared_ptr<Tc
   std::shared_ptr<TcpConnection> server = selectStorageServer(servers);
   std::string message = Message::constructDownLoadBlockMessage(md5, flow_id);
   server->send(std::move(message));
+  SPDLOG_LOGGER_DEBUG(logger_, "request {} from {}", md5.getMd5Value(), server->iport());
 }
 
 std::vector<std::shared_ptr<TcpConnection>> Proxy::findServersStoragedBlock(const Md5Info& md5) {
@@ -297,16 +300,14 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
         Md5Info md5 = client->getTransferingBlockMd5s()[client->getCurrentTransferBlockIndex()];
         requestBlockFromStorageServer(md5, con, client->getFlowId());
       }
-    }
-    else if(message_type == "transfer_all_blocks") {
-      if(client->continueToTransferBlock() != false) {
-        SPDLOG_LOGGER_ERROR(logger_, "client {} has some blocks need to send.", con->iport());
-        con->force_close();
-        return;
+      else {
+        //have transfer all blocks.
+        std::string message = Message::constructTransferAllBlocksMessage();
+        con->send(std::move(message));
+        //change state to wait transfer all blocks message.
+        client->setState(ClientContext::state::have_transfered_all_blocks);
+        SPDLOG_LOGGER_INFO(logger_, "client : {} change state to have transfered all blocks. ", con->iport());
       }
-      //change state to wait transfer all blocks message.
-      client->setState(ClientContext::state::have_transfered_all_blocks);
-      SPDLOG_LOGGER_INFO(logger_, "client : {} change state to have transfered all blocks. ", con->iport());
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {}", message_type);
@@ -318,6 +319,7 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
     SPDLOG_LOGGER_ERROR(logger_, "should not look at this.");
     con->force_close();
   }
+  SPDLOG_LOGGER_DEBUG(logger_, "get next message");
   con->get_next_message();
 }
 
@@ -401,6 +403,7 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
         con->force_close();
         return;
       }
+      SPDLOG_LOGGER_DEBUG(logger_, "send to client {} , flow_id = {}", client->second->iport(), client->first);
       std::string msg(con->message_data(), con->message_length());
       client->second->send(std::move(msg));
     }

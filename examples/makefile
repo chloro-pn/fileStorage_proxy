@@ -1,6 +1,6 @@
 CXX := g++
 INCLUDE_PATH := -I ../include -I ../third_party
-CXXFLAGS := -Wall -std=c++11
+CXXFLAGS := -Wall -std=c++11 -g
 LIBS := -L../src -lfilest -lpthread
 
 #### spdlog ###

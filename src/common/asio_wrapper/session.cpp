@@ -126,12 +126,14 @@ void Session::do_write(const std::string &content) {
   write_bufs_.push_back(std::string((const char*)(&n), sizeof(n)));
   write_bufs_.push_back(content);
   if(writing_ == true) {
+    spdlog::get("console")->trace("writing, return.");
     return;
   }
   else {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
         bufs.insert(std::move(each));
+        spdlog::get("console")->trace("continue to send {}", each);
     }
     write_bufs_.clear();
     writing_ = true;
@@ -154,11 +156,13 @@ void Session::continue_to_send() {
   assert(writing_ == true);
   if(write_bufs_.empty() == true) {
     writing_ = false;
+    spdlog::get("console")->trace("send over.");
     onWriteComplete();
   }
   else {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
+      spdlog::get("console")->trace("continue to send {}", each);
         bufs.insert(std::move(each));
     }
     write_bufs_.clear();
@@ -183,12 +187,14 @@ void Session::do_write(std::string&& content) {
   write_bufs_.push_back(std::string((const char*)(&n), sizeof(n)));
   write_bufs_.push_back(std::move(content));
   if(writing_ == true) {
+    spdlog::get("console")->trace("writing, return.");
     return;
   }
   else {
     MultiBuffer bufs;
     for(const auto&  each : write_bufs_) {
-        bufs.insert(std::move(each));
+      spdlog::get("console")->trace("continue to send {}", each);
+      bufs.insert(std::move(each));
     }
     write_bufs_.clear();
     writing_ = true;

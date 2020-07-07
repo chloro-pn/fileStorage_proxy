@@ -55,6 +55,7 @@ void StorageServer::sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con) 
     if(ref == 0) {
       context->downloadingMd5s().erase(md5);
     }
+    SPDLOG_LOGGER_DEBUG(logger_, "the last piece of md5 : {}", md5.getMd5Value());
   }
   else {
     std::string tmp = md5_content.substr(offset, each_send_size);
@@ -128,9 +129,10 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
   else if(Message::getType(j) == "download_block") {
     uint64_t flow_id = Message::getFlowIdFromDownLoadBlockMessage(j);
     Md5Info need_md5 = Message::getMD5FromDownLoadBlockMessage(j);
+    SPDLOG_LOGGER_DEBUG(logger_, "download block {}", need_md5.getMd5Value());
     if(context->downloadingMd5s().find(need_md5) == context->downloadingMd5s().end()) {
       std::string mc = pathStorage().getMd5ContentFromStorage(need_md5);
-      context->downloadingMd5s()[need_md5] = {0, std::move(mc)};
+      context->downloadingMd5s()[need_md5] = {1, std::move(mc)};
     }
     else {
       // add ref.

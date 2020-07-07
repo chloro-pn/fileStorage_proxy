@@ -32,12 +32,14 @@ void IdStorage::storageIdMd5s(const Md5Info& id, const std::vector<Md5Info>& md5
     j["md5s"].push_back(each.getMd5Value());
   }
   std::string value = j.dump();
-  redisReply* reply = static_cast<redisReply*>(redisCommand(context_, "HSET id_md5s, %s %s", id.getMd5Value().c_str(), value.c_str()));
+  SPDLOG_LOGGER_DEBUG(logger_, "store : {} -> {}", id.getMd5Value(), value);
+  redisReply* reply = static_cast<redisReply*>(redisCommand(context_, "HSET id_md5s %s %s", id.getMd5Value().c_str(), value.c_str()));
   if(reply->type != REDIS_REPLY_INTEGER) {
     logger_->critical("error reply type : {}", reply->type);
     spdlog::shutdown();
     exit(-1);
   }
+  //
   freeReplyObject(reply);
 }
 
@@ -62,6 +64,7 @@ std::vector<Md5Info> IdStorage::getMd5sFromId(const Md5Info& id) const {
   }
   std::vector<Md5Info> result;
   json j = json::parse(std::string(reply->str, reply->len));
+  SPDLOG_LOGGER_DEBUG(logger_, "storage : {}", std::string(reply->str, reply->len));
   for(json::const_iterator it = j["md5s"].begin(); it != j["md5s"].end(); ++it) {
     result.push_back(Md5Info(it->get<std::string>()));
   }
