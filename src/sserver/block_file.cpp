@@ -1,6 +1,7 @@
 #include "sserver/block_file.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include <string>
 
 BlockFile::BlockFile():fd_(-1),
                        logger_(spdlog::get("console")){
@@ -8,7 +9,7 @@ BlockFile::BlockFile():fd_(-1),
 }
 
 bool BlockFile::createNewFile(std::string path) {
-  fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+  fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
   if(fd_ < 0) {
     logger_->error("file open error");
     return false;
@@ -23,6 +24,14 @@ bool BlockFile::openExistfile(std::string path) {
     return false;
   }
   return true;
+}
+
+bool BlockFile::fileExist(std::string file_path) const {
+  int result = access(file_path.c_str(), F_OK | R_OK);
+  if(result == -1) {
+    SPDLOG_LOGGER_CRITICAL(logger_, "file exist error : {}", strerror(errno));
+  }
+  return result == 0;
 }
 
 std::string BlockFile::readBlock() const {

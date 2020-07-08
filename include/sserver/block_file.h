@@ -15,7 +15,9 @@ public:
   ~BlockFile();
 
   int fd();
-
+  
+  bool fileExist(std::string file_path) const;
+  
   std::string readBlock() const;
 
   void writeBlock(const std::string& str);

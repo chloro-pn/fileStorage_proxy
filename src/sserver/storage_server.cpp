@@ -100,15 +100,12 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
       }
       else {
         bool exist = pathStorage().checkItem(md5);
-        if(exist == true) {
-          std::string ack_message = Message::constructUploadBlockAckMessage(md5);
-          logger_->trace("block {} exist.send ack.", md5.getMd5Value());
-          con->send(ack_message);
-          context->uploadingMd5s().erase(md5);
-          context->uploadingFlowIds().erase(md5);
+        if(exist == false) {
+          pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
+          logger_->trace("md5 {} store in path stroage.", md5.getMd5Value());
         }
-        else {
-          BlockFile bf;
+        BlockFile bf;
+        if(bf.fileExist(context->getBlockFilePath(md5)) == false) {
           bool succ = bf.createNewFile(context->getBlockFilePath(md5));
           if(succ == false) {
             logger_->critical("create new file error.");
@@ -116,13 +113,12 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
             return;
           }
           bf.writeBlock(context->uploadingMd5s()[md5]);
-          pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
-          std::string ack_message = Message::constructUploadBlockAckMessage(md5);
-          logger_->trace("upload block ack. {}", md5.getMd5Value());
-          con->send(ack_message);
-          context->uploadingMd5s().erase(md5);
-          context->uploadingFlowIds().erase(md5);
         }
+        std::string ack_message = Message::constructUploadBlockAckMessage(md5);
+        logger_->trace("upload block ack. {}", md5.getMd5Value());
+        con->send(ack_message);
+        context->uploadingMd5s().erase(md5);
+        context->uploadingFlowIds().erase(md5);
       }
     }
   }
