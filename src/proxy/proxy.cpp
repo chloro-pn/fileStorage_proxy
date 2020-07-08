@@ -205,6 +205,7 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     SPDLOG_LOGGER_DEBUG(logger_, "client {} : state change  to waiting transfer block. ", con->iport());
     auto tmp = idStorage().getMd5sFromId(file_id);
     std::vector<Md5Info> dont_need = Message::getHaveDownloadMd5sFromDownLoadRequestMessage(j);
+    SPDLOG_LOGGER_DEBUG(logger_,"{}", std::string(j.dump()));
     std::vector<Md5Info> really_need;
 
     for(auto& each : tmp) {

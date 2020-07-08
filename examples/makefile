@@ -10,8 +10,8 @@ INCLUDE_PATH += -I ../third_party/spdlog-1.6.1/include
 INCLUDE_PATH += -I ../third_party/asio/include
 
 #### redis ###
-INCLUDE_PATH += -I /home/pn/shared/hiredis-0.14.1
-LIBS += -L/home/pn/shared/hiredis-0.14.1/ -lhiredis
+INCLUDE_PATH += -I /file_storage/hiredis/hiredis-0.14.1
+LIBS += -L/file_storage/hiredis/hiredis-0.14.1/ -lhiredis
 
 SRCS := $(wildcard *.cpp)
 OBJS := $(SRCS:.cpp=.out)
