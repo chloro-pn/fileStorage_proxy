@@ -104,8 +104,9 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
           pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
           logger_->trace("md5 {} store in path stroage.", md5.getMd5Value());
         }
-        BlockFile bf;
-        if(bf.fileExist(context->getBlockFilePath(md5)) == false) {
+        //
+        if(BlockFile::fileExist(context->getBlockFilePath(md5)) == false) {
+          BlockFile bf;
           bool succ = bf.createNewFile(context->getBlockFilePath(md5));
           if(succ == false) {
             logger_->critical("create new file error.");

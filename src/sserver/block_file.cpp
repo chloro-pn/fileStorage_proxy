@@ -26,10 +26,11 @@ bool BlockFile::openExistfile(std::string path) {
   return true;
 }
 
-bool BlockFile::fileExist(std::string file_path) const {
+bool BlockFile::fileExist(std::string file_path) {
   int result = access(file_path.c_str(), F_OK | R_OK);
   if(result == -1) {
-    SPDLOG_LOGGER_CRITICAL(logger_, "file exist error : {}", strerror(errno));
+    auto logger = spdlog::get("console");
+    SPDLOG_LOGGER_CRITICAL(logger, "file exist error : {}", strerror(errno));
   }
   return result == 0;
 }

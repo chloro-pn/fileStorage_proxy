@@ -16,7 +16,7 @@ public:
 
   int fd();
   
-  bool fileExist(std::string file_path) const;
+  static bool fileExist(std::string file_path);
   
   std::string readBlock() const;
 
