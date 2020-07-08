@@ -400,12 +400,12 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
       auto client = clients_.find(id);
       if(client == clients_.end()) {
         SPDLOG_LOGGER_ERROR(logger_, "client {} disconnect when transfering block. ", id);
-        con->force_close();
-        return;
       }
-      SPDLOG_LOGGER_DEBUG(logger_, "send to client {} , flow_id = {}", client->second->iport(), client->first);
-      std::string msg(con->message_data(), con->message_length());
-      client->second->send(std::move(msg));
+      else {
+        SPDLOG_LOGGER_DEBUG(logger_, "send to client {} , flow_id = {}", client->second->iport(), client->first);
+        std::string msg(con->message_data(), con->message_length());
+        client->second->send(std::move(msg));
+      }
     }
     else {
       SPDLOG_LOGGER_ERROR(logger_, "error message type : {} {}", message_type, con->iport());

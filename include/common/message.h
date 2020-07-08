@@ -95,6 +95,9 @@ Md5Info getMd5FromTransferBlockAckMessage(const json& j);
 
 //TRANSFER_ALL_BLOCKS
 std::string constructTransferAllBlocksMessage();
+
+//CLIENT_CLEAN
+std::string constructClientClean(uint64_t flow_id);
 }
 
 #endif // MESSAGE_H

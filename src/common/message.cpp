@@ -253,4 +253,12 @@ std::string constructTransferAllBlocksMessage() {
   j["type"] = "transfer_all_blocks";
   return j.dump();
 }
+
+//CLIENT_CLEAN
+std::string constructClientClean(uint64_t flow_id) {
+  json j;
+  j["type"] = "client_clean";
+  j["flow_id"] = flow_id;
+  return j.dump();
+}
 } //namespace Message
