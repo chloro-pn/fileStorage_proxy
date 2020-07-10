@@ -84,6 +84,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     }
 
     if(context->uploadingFlowIds()[md5] != flow) {
+      SPDLOG_LOGGER_DEBUG(logger_, "different flow id {} != {}", context->uploadingFlowIds()[md5], flow);
       goto end_point;
     }
     context->uploadingMd5s()[md5].append(content);
