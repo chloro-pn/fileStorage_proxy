@@ -36,6 +36,7 @@ public:
       each_cb(block, succ);
     }
     block_ack_callbacks_.erase(block);
+    SPDLOG_LOGGER_DEBUG(logger_, "pub func over.");
   }
 
   void handleRemainEvent() {

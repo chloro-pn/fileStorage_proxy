@@ -320,7 +320,6 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
     SPDLOG_LOGGER_ERROR(logger_, "should not look at this.");
     con->force_close();
   }
-  SPDLOG_LOGGER_DEBUG(logger_, "get next message");
   con->get_next_message();
 }
 
