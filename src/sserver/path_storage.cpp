@@ -20,7 +20,7 @@ std::vector<Md5Info> PathStorage::getAllItems() const {
   redisReply *reply = nullptr;
   reply = static_cast<redisReply*>(redisCommand(context_, "HGETALL md5_path"));
   if(reply->type != REDIS_REPLY_ARRAY) {
-    logger_->critical("redis reply error type : {}", reply->type);
+    SPDLOG_LOGGER_CRITICAL(logger_, "redis reply error type : {}", reply->type);
     spdlog::shutdown();
     exit(-1);
   }

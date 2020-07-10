@@ -12,7 +12,7 @@
 using nlohmann::json;
 
 void StorageServer::onConnection(std::shared_ptr<TcpConnection> con) {
-  logger_->trace("storage server {} connect.", con->iport());
+  SPDLOG_LOGGER_DEBUG(logger_, "storage server {} connect.", con->iport());
   con->set_context(std::make_shared<StorageServerContext>());
   StorageServerContext* state = con->get_context<StorageServerContext>();
   state->setState(StorageServerContext::state::transfering_block_set);
@@ -25,7 +25,7 @@ void StorageServer::sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con) 
   StorageServerContext* context = con->get_context<StorageServerContext>();
   auto& download_context = context->downloadingContext();
   if(download_context.empty() == true) {
-    //nothing to send.
+    SPDLOG_LOGGER_DEBUG(logger_, "send over.");
     return;
   }
   auto need = download_context.begin();
@@ -68,7 +68,6 @@ void StorageServer::sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con) 
 }
 
 void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
-  logger_->trace("on message.");
   StorageServerContext* context = con->get_context<StorageServerContext>();
   json j = json::parse(std::string(con->message_data(), con->message_length()));
 
@@ -93,34 +92,32 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
       std::string md5_value = MD5(context->uploadingMd5s()[md5]).toStr();
       if(md5_value != md5.getMd5Value()) {
         std::string fail_message = Message::constructUploadBlockFailMessage(md5);
-        logger_->warn("upload block fail. {} != {}", md5.getMd5Value(), md5_value);
+        SPDLOG_LOGGER_WARN(logger_, "upload block fail. {} != {}", md5.getMd5Value(), md5_value);
         con->send(fail_message);
-        context->uploadingMd5s().erase(md5);
-        context->uploadingFlowIds().erase(md5);
       }
       else {
         bool exist = pathStorage().checkItem(md5);
         if(exist == false) {
           pathStorage().storageItemPath(md5, context->getBlockFilePath(md5));
-          logger_->trace("md5 {} store in path stroage.", md5.getMd5Value());
+          SPDLOG_LOGGER_DEBUG(logger_, "md5 {} store in path storage.", md5.getMd5Value());
         }
         //
         if(BlockFile::fileExist(context->getBlockFilePath(md5)) == false) {
           BlockFile bf;
           bool succ = bf.createNewFile(context->getBlockFilePath(md5));
           if(succ == false) {
-            logger_->critical("create new file error.");
-            con->force_close();
-            return;
+            SPDLOG_LOGGER_ERROR(logger_, "create new file error.");
+            spdlog::shutdown();
+            exit(-1);
           }
           bf.writeBlock(context->uploadingMd5s()[md5]);
         }
         std::string ack_message = Message::constructUploadBlockAckMessage(md5);
-        logger_->trace("upload block ack. {}", md5.getMd5Value());
+        SPDLOG_LOGGER_DEBUG(logger_, "send upload block ack. {}", md5.getMd5Value());
         con->send(ack_message);
-        context->uploadingMd5s().erase(md5);
-        context->uploadingFlowIds().erase(md5);
       }
+      context->uploadingMd5s().erase(md5);
+      context->uploadingFlowIds().erase(md5);
     }
   }
   else if(Message::getType(j) == "download_block") {
@@ -149,7 +146,7 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     sendSomeMd5PieceToProxy(con);
   }
   else {
-    logger_->error("error state.");
+    SPDLOG_LOGGER_ERROR(logger_, "error state.");
     con->force_close();
     return;
   }
@@ -159,17 +156,16 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
 }
 
 void StorageServer::onWriteComplete(std::shared_ptr<TcpConnection> con) {
-  logger_->trace("on write complete.");
   StorageServerContext* context = con->get_context<StorageServerContext>();
   if(context->getState() == StorageServerContext::state::transfering_block_set) {
     sendSomeMd5sToProxy(con);
-    logger_->trace("continue to send block md5 sets.");
+    SPDLOG_LOGGER_DEBUG(logger_, "continue to send block md5 sets.");
   }
   else if(context->getState() == StorageServerContext::state::working) {
     sendSomeMd5PieceToProxy(con);
   }
   else {
-    logger_->error("error state.");
+    SPDLOG_LOGGER_ERROR(logger_, "error state");
     con->force_close();
     return;
   }
@@ -181,14 +177,14 @@ void StorageServer::onClose(std::shared_ptr<TcpConnection> con) {
     std::string fail_message = Message::constructUploadBlockFailMessage(each.first);
     con->send(fail_message);
   }
-  logger_->warn("on close, state : {}", con->get_state_str());
+  SPDLOG_LOGGER_WARN(logger_, "on close, state : {}", con->get_state_str());
 }
 
 StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string port, std::shared_ptr<spdlog::logger> logger):
                              client_(io, ip, port),
                              logger_(logger) {
   if(ds_.init() == false) {
-    logger_->critical("hiredis init error.");
+    SPDLOG_LOGGER_CRITICAL(logger_, "hiredis init error.");
     spdlog::shutdown();
     exit(-1);
   }
@@ -208,11 +204,11 @@ StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string p
   client_.setOnClose([this](std::shared_ptr<TcpConnection> con)->void {
     this->onClose(con);
   });
-  logger_->trace("storage server start.");
+  SPDLOG_LOGGER_DEBUG(logger_, "storage server start.");
 }
 
 void StorageServer::connectToProxyServer() {
-  logger_->trace("connect to proxy.");
+  SPDLOG_LOGGER_DEBUG(logger_, "connect to proxy.");
   client_.connect();
 }
 
@@ -232,10 +228,10 @@ void StorageServer::sendSomeMd5sToProxy(std::shared_ptr<TcpConnection> con) {
     state->nextToTransferMd5Index() = 0;
     state->transferingMd5s().clear();
     state->setState(StorageServerContext::state::working);
+    SPDLOG_LOGGER_DEBUG(logger_, "transfer block set over. change state tu working.");
   }
   else {
     message = Message::constructTransferBlockSetMessage(now_trans, false);
   }
-  SPDLOG_LOGGER_DEBUG(logger_, "current index : {} ", state->nextToTransferMd5Index());
   con->send(std::move(message));
 }

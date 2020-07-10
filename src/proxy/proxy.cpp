@@ -48,10 +48,11 @@ Proxy::Proxy(asio::io_context& io, uint16_t p1_port, uint16_t p2_port, std::shar
   p2_server_.setOnClose([this](std::shared_ptr<TcpConnection> con)->void {
     this->storageOnClose(con);
   });
-  SPDLOG_LOGGER_TRACE(logger_, "proxy server start.");
+  SPDLOG_LOGGER_INFO(logger_, "proxy server start.");
 }
+
 std::vector<std::shared_ptr<TcpConnection>> Proxy::selectSuitableStorageServers() const {
-  size_t need_select_ss = Configure::instance().get<int>("block_backup_count");
+  size_t need_select_ss = Configure::instance().getBlockBackupCount();
   if(storage_servers_.size() < need_select_ss) {
     SPDLOG_LOGGER_CRITICAL(logger_, "storage server's count < {}", need_select_ss);
     spdlog::shutdown();
@@ -64,7 +65,7 @@ std::vector<std::shared_ptr<TcpConnection>> Proxy::selectSuitableStorageServers(
       std::advance(selected, rand() % storage_servers_.size());
       if(std::find(result.begin(), result.end(), *selected) == result.end()) {
         result.push_back(*selected);
-        SPDLOG_LOGGER_DEBUG(logger_, "sserver {} selected.", (*selected)->iport());
+        SPDLOG_LOGGER_INFO(logger_, "sserver {} selected.", (*selected)->iport());
         break;
       }
     }
@@ -94,7 +95,7 @@ std::vector<Md5Info> Proxy::getNeedUploadMd5s(const std::vector<Md5Info> &md5s) 
     }
     ++index;
   }
-  SPDLOG_LOGGER_DEBUG(logger_, "need upload {} blocks", need_upload_blocks.size());
+  SPDLOG_LOGGER_DEBUG(logger_, "request upload {}, need upload {}", md5s.size(), need_upload_blocks.size());
   return need_upload_blocks;
 }
 
@@ -129,24 +130,24 @@ void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, j
         client->addFailStorages();
       }
       else {
-        SPDLOG_LOGGER_TRACE(logger_, "vote for succ. {}", md5.getMd5Value());
+        SPDLOG_LOGGER_DEBUG(logger_, "vote for succ. {}", md5.getMd5Value());
         client->addSuccStorages();
       }
       if(client->readyToReplyClient() == true) {
-        SPDLOG_LOGGER_TRACE(logger_, "all storage server conn call back.");
+        SPDLOG_LOGGER_DEBUG(logger_, "all storage server conn call back.");
         if(client->getSuccStorages() >= 1) {
-          SPDLOG_LOGGER_TRACE(logger_, "block event succ {}", md5.getMd5Value());
+          SPDLOG_LOGGER_DEBUG(logger_, "block event succ {}", md5.getMd5Value());
           std::string msg = Message::constructUploadBlockAckMessage(md5);
           con->send(msg);
         }
         else {
-          SPDLOG_LOGGER_TRACE(logger_, "block event fail {}", md5.getMd5Value());
+          SPDLOG_LOGGER_DEBUG(logger_, "block event fail {}", md5.getMd5Value());
           std::string msg = Message::constructUploadBlockFailMessage(md5);
           con->send(msg);
         }
       }
     };
-    Md5Info info = Message::getMd5FromUploadBlockMessage(j);
+    Md5Info md5 = Message::getMd5FromUploadBlockMessage(j);
     auto storage_servers = selectSuitableStorageServers();
     client->transferingSetzero();
     for(auto& each_server : storage_servers) {
@@ -155,8 +156,8 @@ void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, j
 /*********** careful **************/
       each_server->send(j.dump());
 /**********************************/
-      SPDLOG_LOGGER_DEBUG(logger_, "sub block event. {}", info.getMd5Value());
-      storage->subBlockAckEvent(info, cb);
+      SPDLOG_LOGGER_DEBUG(logger_, "sub block {} event for server {}", md5.getMd5Value(), each_server->iport());
+      storage->subBlockAckEvent(md5, cb);
     }
   }
   else {
@@ -164,7 +165,7 @@ void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, j
     for(auto& each_trans : client->getTransferingStorageServers()) {
       auto server = each_trans.lock();
       if(server) {
-        SPDLOG_LOGGER_TRACE(logger_, "relay upload block message {} to {}.", Message::getMd5FromUploadBlockMessage(j).getMd5Value(), server->iport());
+        SPDLOG_LOGGER_DEBUG(logger_, "relay upload block message {} to {}.", Message::getMd5FromUploadBlockMessage(j).getMd5Value(), server->iport());
         server->send(message);
       }
       else {
@@ -179,7 +180,7 @@ void Proxy::handleClientUploadAllBlocksMessage(std::shared_ptr<TcpConnection> co
   Md5Info file_id = getFileId(client);
   if(idStorage().findId(file_id) == false) {
     idStorage().storageIdMd5s(file_id, client->getUploadingBlockMd5s());
-    SPDLOG_LOGGER_DEBUG(logger_, "file id {} storage in disk.", file_id.getMd5Value());
+    SPDLOG_LOGGER_INFO(logger_, "file id {} storage in disk.", file_id.getMd5Value());
   }
   else {
     SPDLOG_LOGGER_WARN(logger_, "file id {} has been stored in disk.", file_id.getMd5Value());
@@ -187,14 +188,14 @@ void Proxy::handleClientUploadAllBlocksMessage(std::shared_ptr<TcpConnection> co
   std::string msg = Message::constructFileStoreSuccMessage(file_id);
   con->send(msg);
   client->setState(ClientContext::state::have_uploaded_all_blocks);
-  SPDLOG_LOGGER_TRACE(logger_, "change state to have_uploaded_all_blocks.");
+  SPDLOG_LOGGER_DEBUG(logger_, "change state to have_uploaded_all_blocks.");
 }
 
 void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> con, const json& j) {
   Md5Info file_id = Message::getFileIdFromDownLoadRequestMessage(j);
   bool exist = idStorage().findId(file_id);
   if(exist == false) {
-    SPDLOG_LOGGER_DEBUG(logger_, "client {} : file {} not exist. ",con->iport(), file_id.getMd5Value());
+    SPDLOG_LOGGER_INFO(logger_, "client {} : file {} not exist. ",con->iport(), file_id.getMd5Value());
     std::string message = Message::constructFileNotExistMessage(file_id);
     con->send(message);
     //don't change state.
@@ -205,7 +206,6 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     SPDLOG_LOGGER_DEBUG(logger_, "client {} : state change  to waiting transfer block. ", con->iport());
     auto tmp = idStorage().getMd5sFromId(file_id);
     std::vector<Md5Info> dont_need = Message::getHaveDownloadMd5sFromDownLoadRequestMessage(j);
-    SPDLOG_LOGGER_DEBUG(logger_,"{}", std::string(j.dump()));
     std::vector<Md5Info> really_need;
 
     for(auto& each : tmp) {
@@ -221,7 +221,6 @@ void Proxy::handleClientDownloadRequestMessage(std::shared_ptr<TcpConnection> co
     context->setTransferingBlockMd5s(really_need);
     Md5Info request_block = context->getTransferingBlockMd5s()[context->getCurrentTransferBlockIndex()];
     requestBlockFromStorageServer(request_block, con, context->getFlowId());
-    //context->moveToNextTransferBlockIndex();
   }
 }
 
@@ -255,8 +254,9 @@ std::shared_ptr<TcpConnection> Proxy::selectStorageServer(const std::vector<std:
 }
 
 void Proxy::clientOnConnection(std::shared_ptr<TcpConnection> con) {
-  SPDLOG_LOGGER_WARN(logger_, "on connection, {}", con->iport());
+  SPDLOG_LOGGER_INFO(logger_, "on connection, {}", con->iport());
   FlowType id = get_flow_id();
+  SPDLOG_LOGGER_INFO(logger_, "client {} , flow id : {}", con->iport(), id);
   con->set_context(std::make_shared<ClientContext>(id, logger_));
   clients_[id] = con;
   con->get_next_message();
@@ -268,7 +268,7 @@ void Proxy::clientOnMessage(std::shared_ptr<TcpConnection> con) {
   ClientContext* client = con->get_context<ClientContext>();
   ClientContext::state state = client->getState();
   if(state == ClientContext::state::init) {
-    SPDLOG_LOGGER_TRACE(logger_, "client state : init");
+    SPDLOG_LOGGER_DEBUG(logger_, "client state : init");
     if(message_type == "upload_request") {
       handleClientUploadRequestMessage(con, message);
     }
@@ -338,12 +338,12 @@ void Proxy::clientOnClose(std::shared_ptr<TcpConnection> con) {
 
   if(context->getState() == ClientContext::state::have_uploaded_all_blocks) {
     context->setState(ClientContext::state::file_storage_succ);
-    SPDLOG_LOGGER_TRACE(logger_, "file storage succ.");
+    SPDLOG_LOGGER_INFO(logger_, "file storage succ.");
     return;
   }
   else if(context->getState() == ClientContext::state::have_transfered_all_blocks) {
     context->setState(ClientContext::state::file_download_succ);
-    SPDLOG_LOGGER_TRACE(logger_, "file download succ");
+    SPDLOG_LOGGER_INFO(logger_, "file download succ");
     return;
   }
   else {
@@ -400,10 +400,10 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
       FlowType id = Message::getFlowIdFromTransferBlockMessage(message);
       auto client = clients_.find(id);
       if(client == clients_.end()) {
-        SPDLOG_LOGGER_ERROR(logger_, "client {} disconnect when transfering block. ", id);
+        SPDLOG_LOGGER_TRACE(logger_, "client {} disconnect when transfering block. ", id);
       }
       else {
-        SPDLOG_LOGGER_DEBUG(logger_, "send to client {} , flow_id = {}", client->second->iport(), client->first);
+        SPDLOG_LOGGER_TRACE(logger_, "send to client {} , flow_id = {}", client->second->iport(), client->first);
         std::string msg(con->message_data(), con->message_length());
         client->second->send(std::move(msg));
       }
@@ -420,7 +420,7 @@ void Proxy::storageOnMessage(std::shared_ptr<TcpConnection> con) {
 void Proxy::storageOnClose(std::shared_ptr<TcpConnection> con) {
   StorageContext* storage = con->get_context<StorageContext>();
   storage->handleRemainEvent();
-  SPDLOG_LOGGER_TRACE(logger_, "storage server {} disconnect.", con->iport());
-  SPDLOG_LOGGER_WARN(logger_, "state : {}", con->get_state_str());
+  SPDLOG_LOGGER_DEBUG(logger_, "storage server {} disconnect.", con->iport());
+  SPDLOG_LOGGER_DEBUG(logger_, "state : {}", con->get_state_str());
   storage_servers_.erase(con);
 }

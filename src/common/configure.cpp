@@ -31,5 +31,11 @@ void Configure::load(std::string conf_path) {
     exit(-1);
   }
   content_ = json::parse(tmp);
+  redis_ip_ = content_["redis_ip"].get<std::string>();
+  redis_port_ = content_["redis_port"].get<uint16_t>();
+  client_port_ = content_["client_port"].get<uint16_t>();
+  storage_server_port_ = content_["storage_server_port"].get<uint16_t>();
+  block_backup_count_ = content_["block_backup_count"].get<short>();
+
 }
 

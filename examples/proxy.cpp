@@ -22,8 +22,8 @@ int main(int argc, const char* argv[]) {
         asio::io_context io_context;
 
         //start proxy first.
-        uint16_t p1 = Configure::instance().get<uint16_t>("client_port");
-        uint16_t p2 = Configure::instance().get<uint16_t>("storage_server_port");
+        uint16_t p1 = Configure::instance().getClientPort();
+        uint16_t p2 = Configure::instance().getStorageServerPort();
         Proxy proxy(io_context, p1, p2, console);
         io_context.run();
     }
