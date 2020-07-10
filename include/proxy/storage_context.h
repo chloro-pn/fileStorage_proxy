@@ -32,9 +32,11 @@ public:
     if(block_ack_callbacks_.find(block) == block_ack_callbacks_.end()) {
       return;
     }
+    SPDLOG_LOGGER_DEBUG(logger_, "1");
     for(auto& each_cb : block_ack_callbacks_[block]) {
       each_cb(block, succ);
     }
+    SPDLOG_LOGGER_DEBUG(logger_, "2");
     block_ack_callbacks_.erase(block);
     SPDLOG_LOGGER_DEBUG(logger_, "pub func over.");
   }

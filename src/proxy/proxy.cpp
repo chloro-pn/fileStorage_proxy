@@ -117,13 +117,16 @@ void Proxy::handleClientUploadBlockMessage(std::shared_ptr<TcpConnection> con, j
   if(Message::theFirstBlockPiece(j)) {
     SPDLOG_LOGGER_TRACE(logger_, "block {}'s first piece.", Message::getMd5FromUploadBlockMessage(j).getMd5Value());
     client->succFailZero();
-    std::weak_ptr<TcpConnection> weak(con);
-    auto cb = [this, weak](const Md5Info& md5, bool succ)->void {
-      auto con = weak.lock();
-      if(!con) {
-        SPDLOG_LOGGER_WARN(logger_, "client {} exit before block event handle.{} : {}", con->iport(), md5.getMd5Value(), succ);
+    uint64_t flow_id = client->getFlowId();
+    auto cb = [this, flow_id](const Md5Info& md5, bool succ)->void {
+      SPDLOG_LOGGER_DEBUG(logger_, "1");
+      if(clients_.find(flow_id) == clients_.end()) {
+        SPDLOG_LOGGER_WARN(logger_, "client {} exit before block event handle.{} : {}", flow_id, md5.getMd5Value(), succ);
         return;
       }
+      SPDLOG_LOGGER_DEBUG(logger_, "2");
+      auto con = clients_[flow_id];
+      SPDLOG_LOGGER_DEBUG(logger_, "client still alive ! {}", con.use_count());
       ClientContext* client = con->get_context<ClientContext>();
       if(succ == false) {
         SPDLOG_LOGGER_WARN(logger_, "vote for fail. {}", md5.getMd5Value());
