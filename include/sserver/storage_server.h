@@ -4,6 +4,7 @@
 #include "common/asio_wrapper/client.h"
 #include "spdlog/spdlog.h"
 #include "path_storage.h"
+#include "storage_server_context.h"
 #include "asio.hpp"
 
 using asio::ip::tcp;
@@ -25,6 +26,10 @@ public:
   void onClose(std::shared_ptr<TcpConnection> con);
 
   void sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con);
+
+  void cleanDownloadContext(StorageServerContext* context, uint64_t flow_id);
+
+  void cleanUploadContext(StorageServerContext* context, uint64_t flow_id);
 
   PathStorage& pathStorage() {
     return ds_;

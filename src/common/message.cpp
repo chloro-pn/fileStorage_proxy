@@ -261,4 +261,8 @@ std::string constructClientClean(uint64_t flow_id) {
   j["flow_id"] = flow_id;
   return j.dump();
 }
+
+uint64_t getFlowIdFromClientClean(const json& j) {
+  return j["flow_id"].get<uint64_t>();
+}
 } //namespace Message

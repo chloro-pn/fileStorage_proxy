@@ -48,13 +48,8 @@ void StorageServer::sendSomeMd5PieceToProxy(std::shared_ptr<TcpConnection> con) 
     std::string tmp = md5_content.substr(offset, md5_content.size() - offset);
     std::string message = Message::constructTransferBlockMessage(md5, index, true, flow_id, std::move(tmp));
     con->send(std::move(message));
-    //clean
-    download_context.erase(flow_id);
-    //--md5's ref.
-    --ref;
-    if(ref == 0) {
-      context->downloadingMd5s().erase(md5);
-    }
+
+    cleanDownloadContext(context, flow_id);
     SPDLOG_LOGGER_DEBUG(logger_, "the last piece of md5 : {}", md5.getMd5Value());
   }
   else {
@@ -78,19 +73,17 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     std::string content = Message::getContentFromUploadBlockMessage(j);
 
     if(Message::theFirstBlockPiece(j) == true) {
-      if(context->uploadingFlowIds().find(md5) == context->uploadingFlowIds().end()) {
-        context->uploadingFlowIds()[md5] = flow;
+      if(context->uploadingContext().find(flow) == context->uploadingContext().end()) {
+        StorageServerContext::upload_context uc;
+        uc.flow_id = flow;
+        uc.uploading_md5_ = md5;
+        context->uploadingContext()[flow] = uc;
       }
     }
-
-    if(context->uploadingFlowIds()[md5] != flow) {
-      SPDLOG_LOGGER_DEBUG(logger_, "different flow id {} != {}", context->uploadingFlowIds()[md5], flow);
-      goto end_point;
-    }
-    context->uploadingMd5s()[md5].append(content);
+    context->uploadingContext()[flow].content.append(content);
 
     if(Message::theLastBlockPiece(j) == true) {
-      std::string md5_value = MD5(context->uploadingMd5s()[md5]).toStr();
+      std::string md5_value = MD5(context->uploadingContext()[flow].content).toStr();
       if(md5_value != md5.getMd5Value()) {
         std::string fail_message = Message::constructUploadBlockFailMessage(md5);
         SPDLOG_LOGGER_WARN(logger_, "upload block fail. {} != {}", md5.getMd5Value(), md5_value);
@@ -111,14 +104,13 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
             spdlog::shutdown();
             exit(-1);
           }
-          bf.writeBlock(context->uploadingMd5s()[md5]);
+          bf.writeBlock(context->uploadingContext()[flow].content);
         }
         std::string ack_message = Message::constructUploadBlockAckMessage(md5);
         SPDLOG_LOGGER_DEBUG(logger_, "send upload block ack. {}", md5.getMd5Value());
         con->send(ack_message);
       }
-      context->uploadingMd5s().erase(md5);
-      context->uploadingFlowIds().erase(md5);
+      cleanUploadContext(context, flow);
     }
   }
   else if(Message::getType(j) == "download_block") {
@@ -146,13 +138,17 @@ void StorageServer::onMessage(std::shared_ptr<TcpConnection> con) {
     }
     sendSomeMd5PieceToProxy(con);
   }
+  else if(Message::getType(j) == "client_clean") {
+    uint64_t flow_id = Message::getFlowIdFromClientClean(j);
+    cleanDownloadContext(context, flow_id);
+    cleanUploadContext(context, flow_id);
+  }
   else {
     SPDLOG_LOGGER_ERROR(logger_, "error state.");
     con->force_close();
     return;
   }
 
-  end_point:
   con->get_next_message();
 }
 
@@ -174,8 +170,8 @@ void StorageServer::onWriteComplete(std::shared_ptr<TcpConnection> con) {
 
 void StorageServer::onClose(std::shared_ptr<TcpConnection> con) {
   StorageServerContext* context = con->get_context<StorageServerContext>();
-  for(auto& each : context->uploadingMd5s()) {
-    std::string fail_message = Message::constructUploadBlockFailMessage(each.first);
+  for(auto& each : context->uploadingContext()) {
+    std::string fail_message = Message::constructUploadBlockFailMessage(each.second.uploading_md5_);
     con->send(fail_message);
   }
   SPDLOG_LOGGER_WARN(logger_, "on close, state : {}", con->get_state_str());
@@ -211,6 +207,27 @@ StorageServer::StorageServer(asio::io_context& io, std::string ip, std::string p
 void StorageServer::connectToProxyServer() {
   SPDLOG_LOGGER_DEBUG(logger_, "connect to proxy.");
   client_.connect();
+}
+
+void StorageServer::cleanDownloadContext(StorageServerContext* context, uint64_t flow_id) {
+  if(context->downloadingContext().find(flow_id) == context->downloadingContext().end()) {
+    return;
+  }
+  auto& ctx = context->downloadingContext()[flow_id];
+  Md5Info md5 = std::get<0>(ctx);
+
+  uint32_t& ref = context->downloadingMd5s()[md5].first;
+  assert(ref > 0);
+  context->downloadingContext().erase(flow_id);
+  //--md5's ref.
+  --ref;
+  if(ref == 0) {
+    context->downloadingMd5s().erase(md5);
+  }
+}
+
+void StorageServer::cleanUploadContext(StorageServerContext* context, uint64_t flow_id) {
+  context->uploadingContext().erase(flow_id);
 }
 
 void StorageServer::sendSomeMd5sToProxy(std::shared_ptr<TcpConnection> con) {

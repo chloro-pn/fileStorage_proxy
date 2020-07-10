@@ -347,6 +347,10 @@ void Proxy::clientOnClose(std::shared_ptr<TcpConnection> con) {
     return;
   }
   else {
+    std::string client_clean_message = Message::constructClientClean(id);
+    for(auto& each_storage : storage_servers_) {
+      each_storage->send(client_clean_message);
+    }
     SPDLOG_LOGGER_ERROR(logger_, "context error state on close.");
   }
 }

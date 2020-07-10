@@ -98,6 +98,8 @@ std::string constructTransferAllBlocksMessage();
 
 //CLIENT_CLEAN
 std::string constructClientClean(uint64_t flow_id);
+
+uint64_t getFlowIdFromClientClean(const json& j);
 }
 
 #endif // MESSAGE_H
